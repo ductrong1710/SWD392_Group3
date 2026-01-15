@@ -5,11 +5,13 @@ import com.example.swd392_gr03_eco.service.interfaces.ICartService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/cart")
 @RequiredArgsConstructor
+@PreAuthorize("isAuthenticated()") // All methods require authentication
 public class CartController {
 
     private final ICartService cartService;
@@ -22,13 +24,11 @@ public class CartController {
     @PostMapping("/items")
     public ResponseEntity<?> addItemToCart(@RequestBody CartItemRequest request, @SessionAttribute(name = "cart", required = false) Object cart) {
         var updatedCart = cartService.addItem(cart, request);
-        // When creating a resource, it's good practice to return 201 Created.
         return new ResponseEntity<>(updatedCart, HttpStatus.CREATED);
     }
 
     @PutMapping("/items/{productVariantId}")
     public ResponseEntity<?> updateCartItem(@PathVariable Integer productVariantId, @RequestBody CartItemRequest request, @SessionAttribute(name = "cart", required = false) Object cart) {
-        // Ensure the ID in the path and body match
         request.setProductVariantId(productVariantId);
         return ResponseEntity.ok(cartService.updateItem(cart, request));
     }
@@ -36,7 +36,6 @@ public class CartController {
     @DeleteMapping("/items/{productVariantId}")
     public ResponseEntity<?> removeCartItem(@PathVariable Integer productVariantId, @SessionAttribute(name = "cart", required = false) Object cart) {
         cartService.removeItem(cart, productVariantId);
-        // For DELETE, returning 204 No Content is a standard practice.
         return ResponseEntity.noContent().build();
     }
 }

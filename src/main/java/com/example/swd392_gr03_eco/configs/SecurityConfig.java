@@ -14,7 +14,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity // Enable method-level security (e.g., @PreAuthorize)
+@EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -26,28 +26,35 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        // Public endpoints
+                        // --- PUBLIC ENDPOINTS ---
                         .requestMatchers(
                                 "/api/v1/auth/**",
-                                "/api/v1/products", // Allow anyone to view products
-                                "/api/v1/products/{productId}", // Allow anyone to view product details
-                                "/api/v1/products/{productId}/reviews", // Allow anyone to view reviews
-                                "/api/v1/categories", // Allow anyone to view categories
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**"
                         ).permitAll()
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/products/**",
+                                "/api/v1/categories/**",
+                                "/api/v1/reviews/**"
+                        ).permitAll()
 
-                        // Admin-only endpoints
+                        // --- CUSTOMER ENDPOINTS ---
+                        .requestMatchers(
+                                "/api/v1/cart/**",
+                                "/api/v1/orders/**",
+                                "/api/v1/user/**",
+                                "/api/v1/chat-sessions/**"
+                        ).hasAnyAuthority("CUSTOMER", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/reviews").hasAnyAuthority("CUSTOMER", "ADMIN")
+
+
+                        // --- ADMIN-ONLY ENDPOINTS ---
                         .requestMatchers("/api/v1/admin/**").hasAuthority("ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/api/v1/products").hasAuthority("ADMIN") // Only admin can create products
-                        .requestMatchers(HttpMethod.PUT, "/api/v1/products/{id}").hasAuthority("ADMIN") // Only admin can update products
-                        .requestMatchers(HttpMethod.DELETE, "/api/v1/products/{id}").hasAuthority("ADMIN") // Only admin can delete products
-                        .requestMatchers(HttpMethod.POST, "/api/v1/categories").hasAuthority("ADMIN") // Only admin can create categories
-                        .requestMatchers(HttpMethod.PUT, "/api/v1/categories/{id}").hasAuthority("ADMIN") // Only admin can update categories
-                        .requestMatchers(HttpMethod.DELETE, "/api/v1/categories/{id}").hasAuthority("ADMIN") // Only admin can delete categories
+                        .requestMatchers(HttpMethod.POST, "/api/v1/products", "/api/v1/categories").hasAuthority("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/products/**", "/api/v1/categories/**").hasAuthority("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/products/**", "/api/v1/categories/**").hasAuthority("ADMIN")
 
-
-                        // Authenticated users (CUSTOMER or ADMIN)
+                        // All other requests must be authenticated
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
