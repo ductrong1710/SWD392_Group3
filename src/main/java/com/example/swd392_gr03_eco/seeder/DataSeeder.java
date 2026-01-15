@@ -32,7 +32,7 @@ public class DataSeeder implements CommandLineRunner {
     private final ReviewRepository reviewRepository;
     private final ChatSessionRepository chatSessionRepository;
     private final ChatMessageRepository chatMessageRepository;
-    private final PasswordEncoder passwordEncoder; // Added
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     @Transactional
@@ -43,25 +43,45 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     private void seedDatabase() {
-        // Seed Roles
+        // 1. Seed Roles
         Role adminRole = Role.builder().roleName("ADMIN").build();
         Role customerRole = Role.builder().roleName("CUSTOMER").build();
-        roleRepository.saveAll(List.of(adminRole, customerRole));
+        Role staffRole = Role.builder().roleName("STAFF").build();
+        roleRepository.saveAll(List.of(adminRole, customerRole, staffRole));
 
-        // Seed Users
+        // 2. Seed Users
         User adminUser = User.builder()
                 .fullName("Admin User")
                 .email("admin@ecommerce.com")
-                .passwordHash(passwordEncoder.encode("password")) // Encoded password
+                .passwordHash(passwordEncoder.encode("password"))
                 .phone("0123456789")
                 .createdAt(new Timestamp(System.currentTimeMillis()))
                 .build();
         userRepository.save(adminUser);
 
-        UserRole adminUserRole = UserRole.builder().user(adminUser).role(adminRole).build();
-        userRoleRepository.save(adminUserRole);
+        User staffUser = User.builder()
+                .fullName("Staff User")
+                .email("staff@ecommerce.com")
+                .passwordHash(passwordEncoder.encode("password"))
+                .phone("0987654321")
+                .createdAt(new Timestamp(System.currentTimeMillis()))
+                .build();
+        userRepository.save(staffUser);
+        
+        User customerUser = User.builder() // Added CUSTOMER user
+                .fullName("Customer User")
+                .email("customer@ecommerce.com")
+                .passwordHash(passwordEncoder.encode("password"))
+                .phone("0111222333")
+                .createdAt(new Timestamp(System.currentTimeMillis()))
+                .build();
+        userRepository.save(customerUser);
 
-        // Seed Categories, Products, etc.
+        UserRole adminUserRole = UserRole.builder().user(adminUser).role(adminRole).build();
+        UserRole staffUserRole = UserRole.builder().user(staffUser).role(staffRole).build();
+        UserRole customerUserRole = UserRole.builder().user(customerUser).role(customerRole).build(); // Assign CUSTOMER role
+        userRoleRepository.saveAll(List.of(adminUserRole, staffUserRole, customerUserRole));
+
         // ... (rest of the seeder logic)
     }
 }

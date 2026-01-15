@@ -17,7 +17,7 @@ public class ReviewController {
     private final IReviewService reviewService;
 
     @PostMapping("/reviews")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasAuthority('CUSTOMER')") // Only customers can write reviews
     public ResponseEntity<?> createReview(@AuthenticationPrincipal User user, @RequestBody ReviewRequest request) {
         try {
             return ResponseEntity.ok(reviewService.createReview(user.getId().longValue(), request));

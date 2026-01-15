@@ -13,12 +13,12 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/orders")
 @RequiredArgsConstructor
-@PreAuthorize("isAuthenticated()")
 public class OrderController {
 
     private final IOrderService orderService;
 
     @PostMapping
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> createOrder(@AuthenticationPrincipal User user, @RequestBody OrderRequest request, @SessionAttribute("cart") Object cart) {
         try {
             var result = orderService.createOrder(user.getId().longValue(), cart, request);
@@ -29,11 +29,13 @@ public class OrderController {
     }
 
     @GetMapping
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> getCurrentUserOrders(@AuthenticationPrincipal User user) {
         return ResponseEntity.ok(orderService.getOrdersByUserId(user.getId().longValue()));
     }
 
     @GetMapping("/{orderId}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> getOrderDetails(@AuthenticationPrincipal User user, @PathVariable Integer orderId) {
         try {
             return ResponseEntity.ok(orderService.getOrderDetails(orderId, user.getId().longValue()));
@@ -43,6 +45,7 @@ public class OrderController {
     }
 
     @DeleteMapping("/{orderId}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> cancelOrder(@AuthenticationPrincipal User user, @PathVariable Integer orderId) {
         try {
             orderService.cancelOrder(orderId, user.getId().longValue());

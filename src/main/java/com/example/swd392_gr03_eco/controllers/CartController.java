@@ -11,29 +11,32 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/cart")
 @RequiredArgsConstructor
-@PreAuthorize("isAuthenticated()") // All methods require authentication
 public class CartController {
 
     private final ICartService cartService;
 
     @GetMapping
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> getCart(@SessionAttribute(name = "cart", required = false) Object cart) {
         return ResponseEntity.ok(cartService.getCart(cart));
     }
 
     @PostMapping("/items")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> addItemToCart(@RequestBody CartItemRequest request, @SessionAttribute(name = "cart", required = false) Object cart) {
         var updatedCart = cartService.addItem(cart, request);
         return new ResponseEntity<>(updatedCart, HttpStatus.CREATED);
     }
 
     @PutMapping("/items/{productVariantId}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> updateCartItem(@PathVariable Integer productVariantId, @RequestBody CartItemRequest request, @SessionAttribute(name = "cart", required = false) Object cart) {
         request.setProductVariantId(productVariantId);
         return ResponseEntity.ok(cartService.updateItem(cart, request));
     }
 
     @DeleteMapping("/items/{productVariantId}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> removeCartItem(@PathVariable Integer productVariantId, @SessionAttribute(name = "cart", required = false) Object cart) {
         cartService.removeItem(cart, productVariantId);
         return ResponseEntity.noContent().build();

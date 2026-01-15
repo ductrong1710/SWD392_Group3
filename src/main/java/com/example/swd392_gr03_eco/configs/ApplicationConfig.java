@@ -1,5 +1,6 @@
 package com.example.swd392_gr03_eco.configs;
 
+import com.example.swd392_gr03_eco.model.entities.User;
 import com.example.swd392_gr03_eco.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -21,8 +22,19 @@ public class ApplicationConfig {
 
     @Bean
     public UserDetailsService userDetailsService() {
-        return username -> userRepository.findByEmail(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        return username -> {
+            // --- DEBUGGING STEP ---
+            // If the login attempt is for the test user, create it on the fly.
+            if ("test@user.com".equals(username)) {
+                return User.builder()
+                        .email("test@user.com")
+                        .passwordHash(passwordEncoder().encode("password"))
+                        .build();
+            }
+            // Otherwise, proceed with the database lookup.
+            return userRepository.findByEmail(username)
+                    .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        };
     }
 
     @Bean

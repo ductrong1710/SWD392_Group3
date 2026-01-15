@@ -44,15 +44,17 @@ public class SecurityConfig {
                                 "/api/v1/orders/**",
                                 "/api/v1/user/**",
                                 "/api/v1/chat-sessions/**"
-                        ).hasAnyAuthority("CUSTOMER", "ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/api/v1/reviews").hasAnyAuthority("CUSTOMER", "ADMIN")
+                        ).hasAnyAuthority("CUSTOMER", "STAFF", "ADMIN") // Allow staff and admin too
+                        .requestMatchers(HttpMethod.POST, "/api/v1/reviews").hasAnyAuthority("CUSTOMER", "STAFF", "ADMIN")
 
+                        // --- STAFF & ADMIN ENDPOINTS ---
+                        .requestMatchers("/api/v1/admin/**").hasAnyAuthority("STAFF", "ADMIN") // Order management
+                        .requestMatchers(HttpMethod.POST, "/api/v1/products", "/api/v1/categories").hasAnyAuthority("STAFF", "ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/products/**", "/api/v1/categories/**").hasAnyAuthority("STAFF", "ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/products/**", "/api/v1/categories/**").hasAnyAuthority("STAFF", "ADMIN")
 
-                        // --- ADMIN-ONLY ENDPOINTS ---
-                        .requestMatchers("/api/v1/admin/**").hasAuthority("ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/api/v1/products", "/api/v1/categories").hasAuthority("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/v1/products/**", "/api/v1/categories/**").hasAuthority("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/v1/products/**", "/api/v1/categories/**").hasAuthority("ADMIN")
+                        // --- ADMIN-ONLY ENDPOINTS (Example: if you add user management later) ---
+                        // .requestMatchers("/api/v1/super-admin/**").hasAuthority("ADMIN")
 
                         // All other requests must be authenticated
                         .anyRequest().authenticated()

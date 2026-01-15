@@ -10,17 +10,18 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/admin/orders")
 @RequiredArgsConstructor
-@PreAuthorize("hasAuthority('ADMIN')") // All methods in this controller require ADMIN role
 public class AdminOrderController {
 
     private final IOrderService orderService;
 
     @GetMapping
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'STAFF')")
     public ResponseEntity<?> getAllOrders() {
         return ResponseEntity.ok(orderService.getAllOrders());
     }
 
     @PutMapping("/{orderId}/status")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'STAFF')")
     public ResponseEntity<?> updateOrderStatus(@PathVariable Integer orderId, @RequestBody UpdateOrderStatusRequest request) {
         try {
             orderService.updateOrderStatus(orderId, request.getStatus());

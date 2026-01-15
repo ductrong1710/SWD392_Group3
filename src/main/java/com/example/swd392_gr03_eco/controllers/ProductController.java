@@ -42,14 +42,14 @@ public class ProductController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'STAFF')")
     public ResponseEntity<?> createProduct(@RequestBody ProductCreateRequest request) {
         var product = productService.createProduct(request);
         return new ResponseEntity<>(product, HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'STAFF')")
     public ResponseEntity<?> updateProduct(@PathVariable Integer id, @RequestBody ProductCreateRequest request) {
         try {
             return ResponseEntity.ok(productService.updateProduct(id, request));
@@ -59,7 +59,7 @@ public class ProductController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'STAFF')")
     public ResponseEntity<?> deleteProduct(@PathVariable Integer id) {
         try {
             productService.deleteProduct(id);

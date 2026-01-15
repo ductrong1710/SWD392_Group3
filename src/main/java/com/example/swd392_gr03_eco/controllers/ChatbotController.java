@@ -13,12 +13,12 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/chat-sessions")
 @RequiredArgsConstructor
-@PreAuthorize("isAuthenticated()")
 public class ChatbotController {
 
     private final IChatbotService chatbotService;
 
     @PostMapping
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> startChatSession(@AuthenticationPrincipal User user, @RequestBody ChatMessageRequest request) {
         try {
             var result = chatbotService.startSession(user.getId().longValue(), request);
@@ -29,6 +29,7 @@ public class ChatbotController {
     }
 
     @PostMapping("/{sessionId}/messages")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> postMessage(@AuthenticationPrincipal User user, @PathVariable Integer sessionId, @RequestBody ChatMessageRequest request) {
         try {
             var result = chatbotService.continueSession(user.getId().longValue(), sessionId, request);
