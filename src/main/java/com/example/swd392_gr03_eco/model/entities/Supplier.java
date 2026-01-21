@@ -1,16 +1,17 @@
 package com.example.swd392_gr03_eco.model.entities;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
 @Table(name = "suppliers")
-@Data
+@Getter
+@Setter
+@ToString(exclude = "inventoryLogs")
+@EqualsAndHashCode(exclude = "inventoryLogs")
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -27,5 +28,6 @@ public class Supplier {
     private String contactInfo;
 
     @OneToMany(mappedBy = "supplier")
-    private List<InventoryLog> inventoryLogs;
+    @Builder.Default
+    private List<InventoryLog> inventoryLogs = new ArrayList<>();
 }

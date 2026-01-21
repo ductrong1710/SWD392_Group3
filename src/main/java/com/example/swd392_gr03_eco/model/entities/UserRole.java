@@ -1,17 +1,18 @@
 package com.example.swd392_gr03_eco.model.entities;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.io.Serializable;
 import java.util.Objects;
 
 @Entity
 @Table(name = "user_roles")
-@Data
+// Use specific annotations to break the recursive loop
+@Getter
+@Setter
+@ToString(exclude = {"user", "role"})
+@EqualsAndHashCode(exclude = {"user", "role"})
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder

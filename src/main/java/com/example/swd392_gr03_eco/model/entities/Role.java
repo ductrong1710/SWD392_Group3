@@ -1,16 +1,17 @@
 package com.example.swd392_gr03_eco.model.entities;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
+import java.util.HashSet;
 import java.util.Set;
 
 @Entity
 @Table(name = "roles")
-@Data
+@Getter
+@Setter
+@ToString(exclude = "userRoles")
+@EqualsAndHashCode(exclude = "userRoles")
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -24,5 +25,6 @@ public class Role {
     private String roleName; // Admin, Customer, Staff
 
     @OneToMany(mappedBy = "role")
-    private Set<UserRole> userRoles;
+    @Builder.Default
+    private Set<UserRole> userRoles = new HashSet<>();
 }

@@ -1,16 +1,16 @@
 package com.example.swd392_gr03_eco.model.entities;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.math.BigDecimal;
 
 @Entity
 @Table(name = "order_items")
-@Data
+@Getter
+@Setter
+@ToString(exclude = {"order", "productVariant"})
+@EqualsAndHashCode(exclude = {"order", "productVariant"})
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder

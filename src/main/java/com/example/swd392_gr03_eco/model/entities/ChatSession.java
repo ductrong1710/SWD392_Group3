@@ -1,17 +1,18 @@
 package com.example.swd392_gr03_eco.model.entities;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
 @Table(name = "chat_sessions")
-@Data
+@Getter
+@Setter
+@ToString(exclude = {"user", "messages"})
+@EqualsAndHashCode(exclude = {"user", "messages"})
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -31,6 +32,7 @@ public class ChatSession {
     @Column(name = "context_summary", columnDefinition = "TEXT")
     private String contextSummary;
 
-    @OneToMany(mappedBy = "session")
-    private List<ChatMessage> chatMessages;
+    @OneToMany(mappedBy = "session", cascade = CascadeType.ALL)
+    @Builder.Default
+    private List<ChatMessage> messages = new ArrayList<>();
 }

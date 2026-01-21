@@ -1,7 +1,9 @@
 package com.example.swd392_gr03_eco.model.dto.response;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
@@ -9,6 +11,8 @@ import java.util.List;
 
 @Data
 @Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class OrderResponseDto {
     private Integer orderId;
     private String status;

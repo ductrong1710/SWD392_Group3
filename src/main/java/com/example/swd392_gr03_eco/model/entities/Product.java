@@ -1,18 +1,19 @@
 package com.example.swd392_gr03_eco.model.entities;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
 @Table(name = "products")
-@Data
+@Getter
+@Setter
+@ToString(exclude = {"productVariants", "productImages", "reviews"})
+@EqualsAndHashCode(exclude = {"productVariants", "productImages", "reviews"})
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -41,7 +42,6 @@ public class Product {
     @Column(name = "is_active")
     private Boolean isActive;
 
-    // Storing vector as a text field for compatibility with SQL Server
     @Lob
     @Column(name = "vector_embedding", columnDefinition = "TEXT")
     private String vectorEmbedding;
@@ -50,11 +50,14 @@ public class Product {
     private Timestamp createdAt;
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
-    private List<ProductVariant> productVariants;
+    @Builder.Default // Ensure builder initializes the collection
+    private List<ProductVariant> productVariants = new ArrayList<>();
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
-    private List<ProductImage> productImages;
+    @Builder.Default // Ensure builder initializes the collection
+    private List<ProductImage> productImages = new ArrayList<>();
 
     @OneToMany(mappedBy = "product")
-    private List<Review> reviews;
+    @Builder.Default // Ensure builder initializes the collection
+    private List<Review> reviews = new ArrayList<>();
 }

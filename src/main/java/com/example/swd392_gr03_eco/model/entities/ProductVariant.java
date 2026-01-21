@@ -2,17 +2,18 @@ package com.example.swd392_gr03_eco.model.entities;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
 @Table(name = "product_variants")
-@Data
+@Getter
+@Setter
+@ToString(exclude = {"product", "orderItems", "inventoryLogs"})
+@EqualsAndHashCode(exclude = {"product", "orderItems", "inventoryLogs"})
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -43,8 +44,10 @@ public class ProductVariant {
     private Integer stockQuantity;
 
     @OneToMany(mappedBy = "productVariant")
-    private List<OrderItem> orderItems;
+    @Builder.Default
+    private List<OrderItem> orderItems = new ArrayList<>();
 
     @OneToMany(mappedBy = "productVariant")
-    private List<InventoryLog> inventoryLogs;
+    @Builder.Default
+    private List<InventoryLog> inventoryLogs = new ArrayList<>();
 }

@@ -3,6 +3,7 @@ package com.example.swd392_gr03_eco.service.impl;
 import com.example.swd392_gr03_eco.model.dto.request.CartItemRequest;
 import com.example.swd392_gr03_eco.model.dto.response.CartDto;
 import com.example.swd392_gr03_eco.model.dto.response.CartItemDto;
+import com.example.swd392_gr03_eco.model.entities.ProductImage;
 import com.example.swd392_gr03_eco.model.entities.ProductVariant;
 import com.example.swd392_gr03_eco.repositories.ProductVariantRepository;
 import com.example.swd392_gr03_eco.service.interfaces.ICartService;
@@ -37,6 +38,14 @@ public class CartServiceImpl implements ICartService {
         if (item != null) {
             item.setQuantity(item.getQuantity() + request.getQuantity());
         } else {
+            String imageUrl = null;
+            if (variant.getProduct() != null && variant.getProduct().getProductImages() != null) {
+                imageUrl = variant.getProduct().getProductImages().stream()
+                        .findFirst()
+                        .map(ProductImage::getImageUrl)
+                        .orElse(null);
+            }
+
             item = CartItemDto.builder()
                     .productVariantId(variant.getId())
                     .productName(variant.getProduct().getName())
@@ -44,7 +53,7 @@ public class CartServiceImpl implements ICartService {
                     .size(variant.getSize())
                     .price(variant.getPriceOverride() != null ? variant.getPriceOverride() : variant.getProduct().getBasePrice())
                     .quantity(request.getQuantity())
-                    .imageUrl(variant.getProduct().getProductImages().stream().findFirst().map(pi -> pi.getImageUrl()).orElse(null))
+                    .imageUrl(imageUrl)
                     .build();
             cart.put(variant.getId(), item);
         }

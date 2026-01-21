@@ -1,23 +1,25 @@
 package com.example.swd392_gr03_eco.model.entities;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 @Entity
 @Table(name = "users")
-@Data
+@Getter
+@Setter
+@ToString(exclude = {"userRoles", "addresses", "orders", "reviews", "chatSessions"})
+@EqualsAndHashCode(exclude = {"userRoles", "addresses", "orders", "reviews", "chatSessions"})
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -42,26 +44,32 @@ public class User implements UserDetails {
     @Column(name = "created_at")
     private Timestamp createdAt;
 
-    @OneToMany(mappedBy = "user", fetch = FetchType.EAGER) // Eager fetch for authorities
-    private Set<UserRole> userRoles;
-
-    // Mapped relationships (can be lazy)
-    @OneToMany(mappedBy = "user")
-    private List<UserAddress> addresses;
+    @OneToMany(mappedBy = "user", fetch = FetchType.EAGER)
+    @Builder.Default
+    private Set<UserRole> userRoles = new HashSet<>();
 
     @OneToMany(mappedBy = "user")
-    private List<Order> orders;
+    @Builder.Default
+    private List<UserAddress> addresses = new ArrayList<>();
 
     @OneToMany(mappedBy = "user")
-    private List<Review> reviews;
+    @Builder.Default
+    private List<Order> orders = new ArrayList<>();
 
     @OneToMany(mappedBy = "user")
-    private List<ChatSession> chatSessions;
+    @Builder.Default
+    private List<Review> reviews = new ArrayList<>();
 
+    @OneToMany(mappedBy = "user")
+    @Builder.Default
+    private List<ChatSession> chatSessions = new ArrayList<>();
 
     // UserDetails implementation
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
+        if (userRoles == null) {
+            return List.of();
+        }
         return userRoles.stream()
                 .map(userRole -> new SimpleGrantedAuthority(userRole.getRole().getRoleName()))
                 .collect(Collectors.toList());

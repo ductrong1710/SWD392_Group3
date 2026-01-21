@@ -1,17 +1,17 @@
 package com.example.swd392_gr03_eco.model.entities;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
 @Table(name = "categories")
-@Data
+@Getter
+@Setter
+@ToString(exclude = {"parent", "children", "products"})
+@EqualsAndHashCode(exclude = {"parent", "children", "products"})
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -26,15 +26,16 @@ public class Category {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_id")
-    @JsonIgnore
     private Category parent;
 
     @OneToMany(mappedBy = "parent")
-    private List<Category> children;
+    @Builder.Default
+    private List<Category> children = new ArrayList<>();
 
     @Column(name = "ai_tag_metadata", columnDefinition = "TEXT")
     private String aiTagMetadata;
 
     @OneToMany(mappedBy = "category")
-    private List<Product> products;
+    @Builder.Default
+    private List<Product> products = new ArrayList<>();
 }

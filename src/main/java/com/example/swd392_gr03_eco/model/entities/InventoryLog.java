@@ -1,16 +1,16 @@
 package com.example.swd392_gr03_eco.model.entities;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.sql.Timestamp;
 
 @Entity
 @Table(name = "inventory_logs")
-@Data
+@Getter
+@Setter
+@ToString(exclude = {"productVariant", "supplier"})
+@EqualsAndHashCode(exclude = {"productVariant", "supplier"})
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder

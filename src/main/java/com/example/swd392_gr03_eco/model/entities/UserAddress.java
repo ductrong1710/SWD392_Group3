@@ -1,15 +1,14 @@
 package com.example.swd392_gr03_eco.model.entities;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Entity
 @Table(name = "user_addresses")
-@Data
+@Getter
+@Setter
+@ToString(exclude = "user")
+@EqualsAndHashCode(exclude = "user")
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -21,7 +20,6 @@ public class UserAddress {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
-    @JsonIgnore
     private User user;
 
     @Column(name = "address_line")

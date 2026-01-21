@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Timestamp;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -45,18 +46,21 @@ public class AuthServiceImpl implements IAuthService {
                 .phone(request.getPhone())
                 .createdAt(new Timestamp(System.currentTimeMillis()))
                 .build();
-        userRepository.save(user);
+        User savedUser = userRepository.save(user);
 
         Role customerRole = roleRepository.findByRoleName("CUSTOMER")
-                .orElseThrow(() -> new IllegalStateException("CUSTOMER role not found"));
+                .orElseThrow(() -> new IllegalStateException("CUSTOMER role not found in seeder"));
 
         UserRole userRole = UserRole.builder()
-                .user(user)
+                .user(savedUser)
                 .role(customerRole)
                 .build();
         userRoleRepository.save(userRole);
 
-        String jwtToken = jwtService.generateToken(user);
+        // Refresh the user object to include the newly saved role association
+        savedUser.setUserRoles(Set.of(userRole));
+
+        String jwtToken = jwtService.generateToken(savedUser);
         return AuthResponse.builder().token(jwtToken).build();
     }
 

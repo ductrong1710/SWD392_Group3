@@ -1,9 +1,16 @@
 package com.example.swd392_gr03_eco.model.dto.request;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.util.List;
 
 @Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class OrderRequest {
     // User info will be taken from security context, not from request body
     // private Long userId;
