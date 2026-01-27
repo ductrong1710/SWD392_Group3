@@ -1,8 +1,9 @@
 package com.example.swd392_gr03_eco.service.interfaces;
 
 import com.example.swd392_gr03_eco.model.dto.request.CheckoutRequest;
-import com.example.swd392_gr03_eco.model.dto.response.PaymentResponse;
+import com.example.swd392_gr03_eco.model.dto.response.CheckoutResponse;
+import com.example.swd392_gr03_eco.model.entities.User;
 
 public interface ICheckoutService {
-    PaymentResponse checkout(Object sessionCart, CheckoutRequest request);
+    CheckoutResponse processCheckout(User user, CheckoutRequest request);
 }

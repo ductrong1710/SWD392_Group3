@@ -2,11 +2,10 @@ package com.example.swd392_gr03_eco.service.impl;
 
 import com.example.swd392_gr03_eco.model.dto.request.ReviewRequest;
 import com.example.swd392_gr03_eco.model.dto.response.ReviewResponseDto;
-import com.example.swd392_gr03_eco.model.entities.Product;
+import com.example.swd392_gr03_eco.model.entities.OrderItem;
 import com.example.swd392_gr03_eco.model.entities.Review;
 import com.example.swd392_gr03_eco.model.entities.User;
-import com.example.swd392_gr03_eco.repositories.OrderRepository;
-import com.example.swd392_gr03_eco.repositories.ProductRepository;
+import com.example.swd392_gr03_eco.repositories.OrderItemRepository;
 import com.example.swd392_gr03_eco.repositories.ReviewRepository;
 import com.example.swd392_gr03_eco.repositories.UserRepository;
 import com.example.swd392_gr03_eco.service.interfaces.IReviewService;
@@ -22,30 +21,35 @@ import java.util.stream.Collectors;
 public class ReviewServiceImpl implements IReviewService {
 
     private final ReviewRepository reviewRepository;
-    private final OrderRepository orderRepository;
+    private final OrderItemRepository orderItemRepository;
     private final UserRepository userRepository;
-    private final ProductRepository productRepository;
 
     @Override
     public ReviewResponseDto createReview(Long userId, ReviewRequest request) {
-        // 1. Check if user has purchased this product
-        boolean hasPurchased = orderRepository.existsByUserIdAndProductIdAndStatus(userId.intValue(), request.getProductId(), "COMPLETED");
-        if (!hasPurchased) {
-            throw new RuntimeException("You can only review products you have purchased and the order is completed.");
+        OrderItem orderItem = orderItemRepository.findById(request.getOrderItemId())
+                .orElseThrow(() -> new RuntimeException("Order item not found"));
+
+        // 1. Check if the user owns the order item
+        if (!orderItem.getOrder().getUser().getId().equals(userId.intValue())) {
+            throw new SecurityException("You can only review items from your own orders.");
+        }
+        
+        // 2. Check if the order is completed
+        if (!"COMPLETED".equals(orderItem.getOrder().getStatus())) {
+            throw new RuntimeException("You can only review items from completed orders.");
         }
 
-        // 2. Check if user has already reviewed this product
-        boolean hasReviewed = reviewRepository.existsByUserIdAndProductId(userId.intValue(), request.getProductId());
+        // 3. Check if user has already reviewed this order item
+        boolean hasReviewed = reviewRepository.existsByOrderItemId(request.getOrderItemId());
         if (hasReviewed) {
-            throw new RuntimeException("You have already reviewed this product.");
+            throw new RuntimeException("You have already reviewed this item.");
         }
 
         User user = userRepository.findById(userId.intValue()).orElseThrow(() -> new RuntimeException("User not found"));
-        Product product = productRepository.findById(request.getProductId()).orElseThrow(() -> new RuntimeException("Product not found"));
 
         Review review = Review.builder()
                 .user(user)
-                .product(product)
+                .orderItem(orderItem)
                 .rating(request.getRating())
                 .comment(request.getComment())
                 .createdAt(new Timestamp(System.currentTimeMillis()))
@@ -56,8 +60,8 @@ public class ReviewServiceImpl implements IReviewService {
     }
 
     @Override
-    public List<ReviewResponseDto> getReviewsByProductId(Integer productId) {
-        return reviewRepository.findByProductId(productId).stream()
+    public List<ReviewResponseDto> getReviewsByOrderItemId(Integer orderItemId) {
+        return reviewRepository.findByOrderItemId(orderItemId).stream()
                 .map(this::mapReviewToDto)
                 .collect(Collectors.toList());
     }

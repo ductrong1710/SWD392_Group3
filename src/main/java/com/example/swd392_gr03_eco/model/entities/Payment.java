@@ -9,8 +9,8 @@ import java.sql.Timestamp;
 @Table(name = "payments")
 @Getter
 @Setter
-@ToString(exclude = "order")
-@EqualsAndHashCode(exclude = "order")
+@ToString(exclude = {"order", "user"})
+@EqualsAndHashCode(exclude = {"order", "user"})
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -23,6 +23,10 @@ public class Payment {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id")
     private Order order;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
 
     @Column(name = "method")
     private String method;

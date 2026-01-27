@@ -12,8 +12,8 @@ import java.util.List;
 @Table(name = "products")
 @Getter
 @Setter
-@ToString(exclude = {"productVariants", "productImages", "reviews"})
-@EqualsAndHashCode(exclude = {"productVariants", "productImages", "reviews"})
+@ToString(exclude = {"productVariants", "productImages"})
+@EqualsAndHashCode(exclude = {"productVariants", "productImages"})
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -56,8 +56,4 @@ public class Product {
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
     @Builder.Default // Ensure builder initializes the collection
     private List<ProductImage> productImages = new ArrayList<>();
-
-    @OneToMany(mappedBy = "product")
-    @Builder.Default // Ensure builder initializes the collection
-    private List<Review> reviews = new ArrayList<>();
 }

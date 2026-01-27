@@ -18,8 +18,8 @@ import java.util.stream.Collectors;
 @Table(name = "users")
 @Getter
 @Setter
-@ToString(exclude = {"userRoles", "addresses", "orders", "reviews", "chatSessions"})
-@EqualsAndHashCode(exclude = {"userRoles", "addresses", "orders", "reviews", "chatSessions"})
+@ToString(exclude = {"userRoles", "orders", "reviews"})
+@EqualsAndHashCode(exclude = {"userRoles", "orders", "reviews"})
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -50,19 +50,11 @@ public class User implements UserDetails {
 
     @OneToMany(mappedBy = "user")
     @Builder.Default
-    private List<UserAddress> addresses = new ArrayList<>();
-
-    @OneToMany(mappedBy = "user")
-    @Builder.Default
     private List<Order> orders = new ArrayList<>();
 
     @OneToMany(mappedBy = "user")
     @Builder.Default
     private List<Review> reviews = new ArrayList<>();
-
-    @OneToMany(mappedBy = "user")
-    @Builder.Default
-    private List<ChatSession> chatSessions = new ArrayList<>();
 
     // UserDetails implementation
     @Override

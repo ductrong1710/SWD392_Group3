@@ -16,11 +16,7 @@ import java.util.Optional;
 public interface OrderRepository extends JpaRepository<Order, Integer> {
     List<Order> findByUserId(Integer userId);
     Optional<Order> findByIdAndUserId(Integer orderId, Integer userId);
-
-    @Query("SELECT CASE WHEN COUNT(o) > 0 THEN TRUE ELSE FALSE END " +
-           "FROM Order o JOIN o.orderItems oi JOIN oi.productVariant pv " +
-           "WHERE o.user.id = :userId AND pv.product.id = :productId AND o.status = :status")
-    boolean existsByUserIdAndProductIdAndStatus(@Param("userId") Integer userId, @Param("productId") Integer productId, @Param("status") String status);
+    Optional<Order> findByUserIdAndStatus(Integer userId, String status);
 
     // --- Dashboard Queries ---
     @Query("SELECT COALESCE(SUM(o.finalAmount), 0) FROM Order o WHERE o.status = 'COMPLETED'")

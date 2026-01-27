@@ -2,10 +2,10 @@ package com.example.swd392_gr03_eco.service.impl;
 
 import com.example.swd392_gr03_eco.model.dto.ai.AiRequest;
 import com.example.swd392_gr03_eco.model.dto.ai.AiResponse;
-import com.example.swd392_gr03_eco.model.dto.request.ChatMessageRequest;
+import com.example.swd392_gr03_eco.model.dto.request.ChatRequest;
 import com.example.swd392_gr03_eco.model.dto.response.ChatResponse;
-import com.example.swd392_gr03_eco.model.entities.*;
-import com.example.swd392_gr03_eco.repositories.*;
+import com.example.swd392_gr03_eco.model.entities.Product;
+import com.example.swd392_gr03_eco.repositories.ProductRepository;
 import com.example.swd392_gr03_eco.service.interfaces.IChatbotService;
 import com.example.swd392_gr03_eco.service.interfaces.IEmbeddingService;
 import lombok.RequiredArgsConstructor;
@@ -14,10 +14,8 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
-import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -28,9 +26,6 @@ public class ChatbotServiceImpl implements IChatbotService {
 
     private final IEmbeddingService embeddingService;
     private final ProductRepository productRepository;
-    private final UserRepository userRepository;
-    private final ChatSessionRepository chatSessionRepository;
-    private final ChatMessageRepository chatMessageRepository;
     private final RestTemplate restTemplate = new RestTemplate();
 
     @Value("${ai.api.key}")
@@ -41,68 +36,30 @@ public class ChatbotServiceImpl implements IChatbotService {
     private String model;
 
     @Override
-    @Transactional
-    public ChatResponse startSession(Long userId, ChatMessageRequest request) {
-        User user = userRepository.findById(userId.intValue()).orElseThrow(() -> new RuntimeException("User not found"));
-        ChatSession session = ChatSession.builder()
-                .user(user)
-                .startedAt(new Timestamp(System.currentTimeMillis()))
-                .build();
-        session = chatSessionRepository.save(session);
-        return processMessage(session, request.getMessage());
-    }
+    public ChatResponse getStatelessReply(ChatRequest request) {
+        String userMessage = request.getMessage();
 
-    @Override
-    @Transactional
-    public ChatResponse continueSession(Long userId, Integer sessionId, ChatMessageRequest request) {
-        User user = userRepository.findById(userId.intValue()).orElseThrow(() -> new RuntimeException("User not found"));
-        ChatSession session = chatSessionRepository.findById(sessionId)
-                .orElseThrow(() -> new RuntimeException("Chat session not found"));
-        if (!session.getUser().getId().equals(user.getId())) {
-            throw new RuntimeException("User does not own this chat session");
-        }
-        return processMessage(session, request.getMessage());
-    }
-
-    private ChatResponse processMessage(ChatSession session, String userMessage) {
-        // 1. Save user message
-        saveMessage(session, "USER", userMessage);
-
-        // 2. Find relevant products
+        // 1. Find relevant products based on the latest user message
         float[] queryEmbedding = embeddingService.getEmbedding(userMessage);
         List<Product> relevantProducts = productRepository.findNearestNeighbors(queryEmbedding, 5);
 
-        // 3. Build prompt and call AI
-        String botReply = callAi(session, relevantProducts, userMessage);
+        // 2. Build prompt and call AI
+        String botReply = callAi(request.getHistory(), relevantProducts, userMessage);
 
-        // 4. Save bot message and update session
-        saveMessage(session, "BOT", botReply);
-        session.setContextSummary(botReply); // Simple context update
-        chatSessionRepository.save(session);
-
+        // 3. Return the response
         return ChatResponse.builder()
-                .sessionId(session.getId())
                 .botMessage(botReply)
                 .build();
     }
 
-    private void saveMessage(ChatSession session, String sender, String text) {
-        ChatMessage message = ChatMessage.builder()
-                .session(session)
-                .sender(sender)
-                .messageText(text)
-                .createdAt(new Timestamp(System.currentTimeMillis()))
-                .build();
-        chatMessageRepository.save(message);
-    }
-
-    private String callAi(ChatSession session, List<Product> products, String userMessage) {
+    private String callAi(List<ChatRequest.Message> history, List<Product> products, String userMessage) {
         List<AiRequest.Message> messages = new ArrayList<>();
         messages.add(new AiRequest.Message("system", "You are a helpful and friendly e-commerce assistant. Your goal is to help the user find the perfect product."));
 
-        // Add conversation history
-        chatMessageRepository.findBySessionIdOrderByCreatedAtAsc(session.getId())
-                .forEach(msg -> messages.add(new AiRequest.Message(msg.getSender().toLowerCase(), msg.getMessageText())));
+        // Add conversation history from the request
+        if (history != null) {
+            history.forEach(msg -> messages.add(new AiRequest.Message(msg.getRole(), msg.getContent())));
+        }
 
         // Add product context
         String productInfo = products.stream()
@@ -116,15 +73,16 @@ public class ChatbotServiceImpl implements IChatbotService {
                 "--- Relevant Products ---\n%s\n\n",
                 productInfo.isEmpty() ? "No specific products found." : productInfo
         );
+        
+        // Add the latest user message with the context
         messages.add(new AiRequest.Message("user", contextPrompt + userMessage));
-
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(apiKey);
 
-        AiRequest request = new AiRequest(model, messages, 0.7);
-        HttpEntity<AiRequest> entity = new HttpEntity<>(request, headers);
+        AiRequest aiRequest = new AiRequest(model, messages, 0.7);
+        HttpEntity<AiRequest> entity = new HttpEntity<>(aiRequest, headers);
 
         try {
             AiResponse response = restTemplate.postForObject(apiUrl, entity, AiResponse.class);

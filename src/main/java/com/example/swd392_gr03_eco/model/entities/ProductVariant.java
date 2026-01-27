@@ -12,8 +12,8 @@ import java.util.List;
 @Table(name = "product_variants")
 @Getter
 @Setter
-@ToString(exclude = {"product", "orderItems", "inventoryLogs"})
-@EqualsAndHashCode(exclude = {"product", "orderItems", "inventoryLogs"})
+@ToString(exclude = {"product", "orderItems"})
+@EqualsAndHashCode(exclude = {"product", "orderItems"})
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -46,8 +46,4 @@ public class ProductVariant {
     @OneToMany(mappedBy = "productVariant")
     @Builder.Default
     private List<OrderItem> orderItems = new ArrayList<>();
-
-    @OneToMany(mappedBy = "productVariant")
-    @Builder.Default
-    private List<InventoryLog> inventoryLogs = new ArrayList<>();
 }

@@ -7,5 +7,5 @@ import java.util.List;
 
 public interface IReviewService {
     ReviewResponseDto createReview(Long userId, ReviewRequest request);
-    List<ReviewResponseDto> getReviewsByProductId(Integer productId);
+    List<ReviewResponseDto> getReviewsByOrderItemId(Integer orderItemId);
 }

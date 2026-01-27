@@ -3,12 +3,12 @@ package com.example.swd392_gr03_eco.service.jwt;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
@@ -18,9 +18,9 @@ import java.util.function.Function;
 @Service
 public class JwtService {
 
-    @Value("${application.security.jwt.secret-key}")
+    @Value("${jwt.secret-key}")
     private String secretKey;
-    @Value("${application.security.jwt.expiration}")
+    @Value("${jwt.expiration}")
     private long jwtExpiration;
 
     public String extractUsername(String token) {
@@ -78,7 +78,9 @@ public class JwtService {
     }
 
     private Key getSignInKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
+        // Changed from Decoders.BASE64.decode(secretKey) to getBytes(StandardCharsets.UTF_8)
+        // to allow plain text secret keys from environment variables.
+        byte[] keyBytes = secretKey.getBytes(StandardCharsets.UTF_8);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 }

@@ -10,13 +10,13 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1")
+@RequestMapping("/api/v1/reviews")
 @RequiredArgsConstructor
 public class ReviewController {
 
     private final IReviewService reviewService;
 
-    @PostMapping("/reviews")
+    @PostMapping
     @PreAuthorize("hasAuthority('CUSTOMER')") // Only customers can write reviews
     public ResponseEntity<?> createReview(@AuthenticationPrincipal User user, @RequestBody ReviewRequest request) {
         try {
@@ -26,8 +26,8 @@ public class ReviewController {
         }
     }
 
-    @GetMapping("/products/{productId}/reviews")
-    public ResponseEntity<?> getReviewsByProduct(@PathVariable Integer productId) {
-        return ResponseEntity.ok(reviewService.getReviewsByProductId(productId));
+    @GetMapping("/order-item/{orderItemId}")
+    public ResponseEntity<?> getReviewsByOrderItem(@PathVariable Integer orderItemId) {
+        return ResponseEntity.ok(reviewService.getReviewsByOrderItemId(orderItemId));
     }
 }

@@ -24,14 +24,9 @@ public class DataSeeder implements CommandLineRunner {
     private final RoleRepository roleRepository;
     private final UserRoleRepository userRoleRepository;
     private final PasswordEncoder passwordEncoder;
-    private final SupplierRepository supplierRepository;
-    private final InventoryLogRepository inventoryLogRepository;
-    private final UserAddressRepository userAddressRepository;
     private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
     private final ReviewRepository reviewRepository;
-    private final ComplaintRepository complaintRepository;
-    private final ComplaintMessageRepository complaintMessageRepository;
 
     @Override
     @Transactional
@@ -56,23 +51,20 @@ public class DataSeeder implements CommandLineRunner {
         User staffUser = createUser("Staff User", "staff@example.com", "000000002", staffRole);
         User customerUser = createUser("Customer User", "customer@example.com", "000000003", customerRole);
 
-        // 3. Address for Customer
-        userAddressRepository.save(UserAddress.builder().user(customerUser).addressLine("123 Main Street").city("Springfield").isDefault(true).build());
-
-        // 4. Categories
+        // 3. Categories
         Category catApparel = categoryRepository.save(Category.builder().name("Apparel").build());
         Category catBottoms = categoryRepository.save(Category.builder().name("Bottoms").build());
         Category catTShirts = categoryRepository.save(Category.builder().name("T-Shirts").parent(catApparel).build());
         Category catJeans = categoryRepository.save(Category.builder().name("Jeans").parent(catBottoms).build());
 
-        // 5. Products, Variants, Images, and Inventory
+        // 4. Products, Variants, Images
         Product tShirt = createProduct("Cotton Round Neck T-Shirt", "Made from 100% breathable cotton", catTShirts, "Coolmate", "250000");
         ProductVariant tShirtVariant = createProductVariant(tShirt, "CM-TS-RED-M", "Red", "M", 50);
 
         Product jeans = createProduct("Slim-fit Jeans", "Slim fit, good stretch", catJeans, "Levi's", "1200000");
         ProductVariant jeansVariant = createProductVariant(jeans, "LV-JN-BLU-30", "Blue", "30", 40);
 
-        // 6. A Completed Order
+        // 5. A Completed Order
         Order completedOrder = Order.builder()
                 .user(customerUser)
                 .totalAmount(new BigDecimal("1450000"))
@@ -89,25 +81,11 @@ public class DataSeeder implements CommandLineRunner {
         completedOrder.getOrderItems().addAll(List.of(item1, item2));
         orderRepository.save(completedOrder);
 
-        // 7. Payment for the Order
-        paymentRepository.save(Payment.builder().order(completedOrder).method("COD").status("SUCCESS").transactionCode("COD123").build());
+        // 6. Payment for the Order
+        paymentRepository.save(Payment.builder().order(completedOrder).user(customerUser).method("COD").status("SUCCESS").transactionCode("COD123").build());
 
-        // 8. Review from the customer
-        reviewRepository.save(Review.builder().user(customerUser).product(tShirt).rating(5).comment("Great shirt, very comfortable fabric!").build());
-
-        // 9. Complaint Flow
-        Complaint complaint = Complaint.builder()
-                .user(customerUser)
-                .order(completedOrder)
-                .title("Jeans arrived torn")
-                .description("I received the order today and found a small tear on the knee of the jeans.")
-                .status("OPEN")
-                .createdAt(new Timestamp(System.currentTimeMillis()))
-                .build();
-        complaintRepository.save(complaint);
-
-        complaintMessageRepository.save(ComplaintMessage.builder().complaint(complaint).user(customerUser).message("Could you please look into this for me?").build());
-        complaintMessageRepository.save(ComplaintMessage.builder().complaint(complaint).user(staffUser).message("Hello, we apologize for the inconvenience. Could you please send us a photo of the product?").build());
+        // 7. Review from the customer for an order item
+        reviewRepository.save(Review.builder().user(customerUser).orderItem(item1).rating(5).comment("Great shirt, very comfortable fabric!").build());
     }
 
     private User createUser(String fullName, String email, String phone, Role role) {

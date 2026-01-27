@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Entity
 @Table(name = "order_items")
@@ -33,4 +34,7 @@ public class OrderItem {
 
     @Column(name = "price_at_purchase")
     private BigDecimal priceAtPurchase;
+
+    @OneToMany(mappedBy = "orderItem", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Review> reviews;
 }

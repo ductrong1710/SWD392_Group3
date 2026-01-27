@@ -1,86 +1,39 @@
 package com.example.swd392_gr03_eco.configs;
 
-import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Configuration;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.text.SimpleDateFormat;
-import java.util.*;
 
-@Component
-@Getter // Add Lombok's Getter to expose properties
+@Configuration
 public class VnpayConfig {
 
-    @Value("${vnpay.url}")
-    private String vnpUrl;
+    // These static fields will be populated by the setter methods below
+    public static String vnp_PayUrl;
+    public static String vnp_ReturnUrl;
+    public static String vnp_TmnCode;
+    public static String secretKey;
 
-    @Value("${vnpay.returnurl}")
-    private String vnpReturnUrl;
+    @Value("${vnpay.pay_url}")
+    public void setVnp_PayUrl(String vnp_PayUrl) {
+        VnpayConfig.vnp_PayUrl = vnp_PayUrl;
+    }
 
-    @Value("${vnpay.tmncode}")
-    private String vnpTmnCode;
+    @Value("${vnpay.return_url}")
+    public void setVnp_ReturnUrl(String vnp_ReturnUrl) {
+        VnpayConfig.vnp_ReturnUrl = vnp_ReturnUrl;
+    }
 
-    @Value("${vnpay.hashsecret}")
-    private String vnpHashSecret;
+    @Value("${vnpay.tmn_code}")
+    public void setVnp_TmnCode(String vnp_TmnCode) {
+        VnpayConfig.vnp_TmnCode = vnp_TmnCode;
+    }
 
-    @Value("${vnpay.version}")
-    private String vnpVersion;
-
-    public String createPaymentUrl(long amount, String orderInfo) {
-        String vnp_TxnRef = String.valueOf(System.currentTimeMillis());
-        Map<String, String> vnp_Params = new HashMap<>();
-        vnp_Params.put("vnp_Version", vnpVersion);
-        vnp_Params.put("vnp_Command", "pay");
-        vnp_Params.put("vnp_TmnCode", vnpTmnCode);
-        vnp_Params.put("vnp_Amount", String.valueOf(amount * 100));
-        vnp_Params.put("vnp_CurrCode", "VND");
-        vnp_Params.put("vnp_TxnRef", vnp_TxnRef);
-        vnp_Params.put("vnp_OrderInfo", orderInfo);
-        vnp_Params.put("vnp_OrderType", "other");
-        vnp_Params.put("vnp_Locale", "vn");
-        vnp_Params.put("vnp_ReturnUrl", vnpReturnUrl);
-        vnp_Params.put("vnp_IpAddr", "127.0.0.1");
-
-        Calendar cld = Calendar.getInstance(TimeZone.getTimeZone("Etc/GMT+7"));
-        SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMddHHmmss");
-        String vnp_CreateDate = formatter.format(cld.getTime());
-        vnp_Params.put("vnp_CreateDate", vnp_CreateDate);
-
-        cld.add(Calendar.MINUTE, 15);
-        String vnp_ExpireDate = formatter.format(cld.getTime());
-        vnp_Params.put("vnp_ExpireDate", vnp_ExpireDate);
-
-        List<String> fieldNames = new ArrayList<>(vnp_Params.keySet());
-        Collections.sort(fieldNames);
-        StringBuilder hashData = new StringBuilder();
-        StringBuilder query = new StringBuilder();
-        Iterator<String> itr = fieldNames.iterator();
-        while (itr.hasNext()) {
-            String fieldName = itr.next();
-            String fieldValue = vnp_Params.get(fieldName);
-            if ((fieldValue != null) && (fieldValue.length() > 0)) {
-                //Build hash data
-                hashData.append(fieldName);
-                hashData.append('=');
-                hashData.append(URLEncoder.encode(fieldValue, StandardCharsets.US_ASCII));
-                //Build query
-                query.append(URLEncoder.encode(fieldName, StandardCharsets.US_ASCII));
-                query.append('=');
-                query.append(URLEncoder.encode(fieldValue, StandardCharsets.US_ASCII));
-                if (itr.hasNext()) {
-                    query.append('&');
-                    hashData.append('&');
-                }
-            }
-        }
-        String queryUrl = query.toString();
-        String vnp_SecureHash = hmacSHA512(vnpHashSecret, hashData.toString());
-        queryUrl += "&vnp_SecureHash=" + vnp_SecureHash;
-        return vnpUrl + "?" + queryUrl;
+    @Value("${vnpay.secret_key}")
+    public void setSecretKey(String secretKey) {
+        VnpayConfig.secretKey = secretKey;
     }
 
     public static String hmacSHA512(final String key, final String data) {
@@ -101,7 +54,7 @@ public class VnpayConfig {
             return sb.toString();
 
         } catch (Exception ex) {
-            return "";
+            throw new RuntimeException("Failed to generate HMAC-SHA512", ex);
         }
     }
 }

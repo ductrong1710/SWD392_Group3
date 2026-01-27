@@ -1,104 +1,89 @@
 package com.example.swd392_gr03_eco.service.impl;
 
-import com.example.swd392_gr03_eco.configs.VnpayConfig;
 import com.example.swd392_gr03_eco.model.dto.request.CheckoutRequest;
-import com.example.swd392_gr03_eco.model.dto.response.CartDto;
-import com.example.swd392_gr03_eco.model.dto.response.PaymentResponse;
-import com.example.swd392_gr03_eco.model.entities.Order;
-import com.example.swd392_gr03_eco.model.entities.OrderItem;
-import com.example.swd392_gr03_eco.model.entities.ProductVariant;
+import com.example.swd392_gr03_eco.model.dto.response.CheckoutResponse;
+import com.example.swd392_gr03_eco.model.entities.*;
 import com.example.swd392_gr03_eco.repositories.OrderRepository;
+import com.example.swd392_gr03_eco.repositories.PaymentRepository;
 import com.example.swd392_gr03_eco.repositories.ProductVariantRepository;
-import com.example.swd392_gr03_eco.service.interfaces.ICartService;
 import com.example.swd392_gr03_eco.service.interfaces.ICheckoutService;
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.example.swd392_gr03_eco.service.interfaces.IPaymentService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.sql.Timestamp;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class CheckoutServiceImpl implements ICheckoutService {
 
-    private final ICartService cartService;
     private final OrderRepository orderRepository;
     private final ProductVariantRepository productVariantRepository;
-    private final VnpayConfig vnpayConfig;
+    private final PaymentRepository paymentRepository;
+    private final IPaymentService paymentService;
     private final ObjectMapper objectMapper;
 
     @Override
     @Transactional
-    public PaymentResponse checkout(Object sessionCart, CheckoutRequest request) {
-        CartDto cart = cartService.getCart(sessionCart);
-        if (cart.getItems().isEmpty()) {
-            throw new RuntimeException("Cart is empty");
+    public CheckoutResponse processCheckout(User user, CheckoutRequest request) {
+        Order cart = orderRepository.findByUserIdAndStatus(user.getId(), "CART")
+                .orElseThrow(() -> new IllegalStateException("Cart is empty."));
+
+        if (cart.getOrderItems().isEmpty()) {
+            throw new IllegalStateException("Cannot checkout with an empty cart.");
         }
 
-        // Create and save the order
-        Order order = createOrder(cart, request);
-        orderRepository.save(order);
+        for (OrderItem item : cart.getOrderItems()) {
+            ProductVariant variant = productVariantRepository.findById(item.getProductVariant().getId())
+                    .orElseThrow(() -> new EntityNotFoundException("Product variant not found during checkout."));
 
-        // Update stock
-        updateStock(order);
-
-        // Create payment URL if VNPAY
-        if ("VNPAY".equalsIgnoreCase(request.getPaymentMethod())) {
-            String paymentUrl = vnpayConfig.createPaymentUrl(
-                    order.getFinalAmount().longValue(),
-                    "Thanh toan don hang " + order.getId()
-            );
-            return PaymentResponse.builder().paymentUrl(paymentUrl).build();
-        }
-
-        return PaymentResponse.builder().paymentUrl(null).build(); // For COD
-    }
-
-    private Order createOrder(CartDto cart, CheckoutRequest request) {
-        Order order = new Order();
-        // Assuming user is authenticated, otherwise handle anonymous user
-        // order.setUser(user);
-        order.setTotalAmount(cart.getTotalPrice());
-        order.setDiscountAmount(BigDecimal.ZERO); // Handle discount later
-        order.setFinalAmount(cart.getTotalPrice());
-        order.setStatus("PENDING");
-        order.setCreatedAt(new Timestamp(System.currentTimeMillis()));
-
-        try {
-            order.setShippingAddressJson(objectMapper.writeValueAsString(request));
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException("Error processing shipping address", e);
-        }
-
-        List<OrderItem> orderItems = cart.getItems().stream().map(cartItem -> {
-            OrderItem item = new OrderItem();
-            item.setOrder(order);
-            ProductVariant variant = productVariantRepository.findById(cartItem.getProductVariantId())
-                    .orElseThrow(() -> new RuntimeException("Product variant not found"));
-            item.setProductVariant(variant);
-            item.setQuantity(cartItem.getQuantity());
-            item.setPriceAtPurchase(cartItem.getPrice());
-            return item;
-        }).collect(Collectors.toList());
-        order.setOrderItems(orderItems);
-
-        return order;
-    }
-
-    private void updateStock(Order order) {
-        for (OrderItem item : order.getOrderItems()) {
-            ProductVariant variant = item.getProductVariant();
-            int newStock = variant.getStockQuantity() - item.getQuantity();
-            if (newStock < 0) {
-                throw new RuntimeException("Not enough stock for product " + variant.getProduct().getName());
+            if (variant.getStockQuantity() < item.getQuantity()) {
+                throw new IllegalStateException("Not enough stock for product: " + variant.getProduct().getName());
             }
-            variant.setStockQuantity(newStock);
+            variant.setStockQuantity(variant.getStockQuantity() - item.getQuantity());
             productVariantRepository.save(variant);
         }
+
+        try {
+            String addressJson = objectMapper.writeValueAsString(request.getShippingAddress());
+            cart.setShippingAddressJson(addressJson);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to serialize shipping address.", e);
+        }
+        
+        cart.setFinalAmount(cart.getTotalAmount());
+        
+        // Special handling for COD
+        if ("COD".equalsIgnoreCase(request.getPaymentMethod())) {
+            cart.setStatus("COMPLETED"); // Or "PROCESSING" if you have a shipping step
+            Order completedOrder = orderRepository.save(cart);
+
+            Payment payment = Payment.builder()
+                .order(completedOrder)
+                .user(user)
+                .method("COD")
+                .status("SUCCESS")
+                .paidAt(new Timestamp(System.currentTimeMillis()))
+                .build();
+            paymentRepository.save(payment);
+
+            return CheckoutResponse.builder()
+                .paymentUrl("/checkout-success?orderId=" + completedOrder.getId() + "&status=SUCCESS") // No external URL needed
+                .orderId(completedOrder.getId())
+                .build();
+        }
+
+        // For other methods like VNPAY
+        cart.setStatus("AWAITING_PAYMENT");
+        Order processingOrder = orderRepository.save(cart);
+        String paymentUrl = paymentService.createPayment(processingOrder, request.getPaymentMethod());
+
+        return CheckoutResponse.builder()
+                .paymentUrl(paymentUrl)
+                .orderId(processingOrder.getId())
+                .build();
     }
 }

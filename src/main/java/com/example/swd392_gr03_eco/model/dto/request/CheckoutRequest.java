@@ -4,10 +4,15 @@ import lombok.Data;
 
 @Data
 public class CheckoutRequest {
-    private String fullName;
-    private String phone;
-    private String address;
-    private String city;
-    private String paymentMethod; // e.g., "COD", "VNPAY"
-    private String note;
+    private AddressInfo shippingAddress;
+    private String paymentMethod; // e.g., "VNPAY", "MOMO", "COD"
+
+    @Data
+    public static class AddressInfo {
+        private String fullName;
+        private String phone;
+        private String addressLine;
+        private String city;
+        // Add other fields like district, ward if needed
+    }
 }

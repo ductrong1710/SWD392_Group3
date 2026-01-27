@@ -5,10 +5,11 @@ import com.example.swd392_gr03_eco.model.dto.response.OrderResponse;
 import com.example.swd392_gr03_eco.model.entities.*;
 import com.example.swd392_gr03_eco.repositories.OrderRepository;
 import com.example.swd392_gr03_eco.repositories.ProductVariantRepository;
-import com.example.swd392_gr03_eco.service.interfaces.IOrderService;
+import com.example.swd392_gr03_eco.service.interfaces.IAdminOrderService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,7 +20,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class OrderServiceImpl implements IOrderService {
+public class AdminOrderServiceImpl implements IAdminOrderService {
 
     private final OrderRepository orderRepository;
     private final ProductVariantRepository productVariantRepository;
@@ -27,9 +28,9 @@ public class OrderServiceImpl implements IOrderService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<OrderResponse> getMyOrders(User user) {
-        // Exclude 'CART' status from user's order history
-        return orderRepository.findByUserId(user.getId()).stream()
+    public List<OrderResponse> getAllOrders() {
+        // Fetch all orders except for active carts, sorted by creation date descending
+        return orderRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt")).stream()
                 .filter(order -> !"CART".equals(order.getStatus()))
                 .map(this::mapOrderToResponse)
                 .collect(Collectors.toList());
@@ -37,31 +38,30 @@ public class OrderServiceImpl implements IOrderService {
 
     @Override
     @Transactional(readOnly = true)
-    public OrderResponse getMyOrderDetails(User user, Integer orderId) {
-        Order order = orderRepository.findByIdAndUserId(orderId, user.getId())
-                .orElseThrow(() -> new EntityNotFoundException("Order not found or you do not have permission to view it."));
-        
-        if ("CART".equals(order.getStatus())) {
-            throw new SecurityException("This is a cart, not a placed order.");
-        }
-        
-        return mapOrderToResponse(order);
+    public OrderResponse getOrderById(Integer orderId) {
+        return orderRepository.findById(orderId)
+                .map(this::mapOrderToResponse)
+                .orElseThrow(() -> new EntityNotFoundException("Order not found with id: " + orderId));
     }
 
     @Override
     @Transactional
-    public void cancelMyOrder(User user, Integer orderId) {
-        Order order = orderRepository.findByIdAndUserId(orderId, user.getId())
-                .orElseThrow(() -> new EntityNotFoundException("Order not found or you do not have permission to cancel it."));
+    public void updateOrderStatus(Integer orderId, String newStatus) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new EntityNotFoundException("Order not found with id: " + orderId));
 
-        // Define which statuses are cancellable by the user
-        List<String> cancellableStatuses = Arrays.asList("AWAITING_PAYMENT", "PENDING");
-        if (!cancellableStatuses.contains(order.getStatus())) {
-            throw new IllegalStateException("Order cannot be cancelled with status: " + order.getStatus());
+        String oldStatus = order.getStatus();
+        if (oldStatus.equals(newStatus)) {
+            return; // No change
         }
 
-        order.setStatus("CANCELLED");
-        revertStock(order);
+        // If admin cancels an order that was confirmed, revert stock
+        List<String> stockRevertingStatuses = Arrays.asList("AWAITING_PAYMENT", "COMPLETED", "SHIPPING");
+        if ("CANCELLED".equalsIgnoreCase(newStatus) && stockRevertingStatuses.contains(oldStatus)) {
+            revertStock(order);
+        }
+
+        order.setStatus(newStatus);
         orderRepository.save(order);
     }
 
@@ -73,6 +73,8 @@ public class OrderServiceImpl implements IOrderService {
         }
     }
 
+    // This is the same mapping logic as in OrderServiceImpl.
+    // In a larger application, this could be moved to a shared mapper component.
     private OrderResponse mapOrderToResponse(Order order) {
         List<OrderResponse.OrderItemResponse> itemResponses = order.getOrderItems().stream()
                 .map(this::mapOrderItemToResponse)
@@ -122,7 +124,6 @@ public class OrderServiceImpl implements IOrderService {
         try {
             return objectMapper.readValue(json, CheckoutRequest.AddressInfo.class);
         } catch (Exception e) {
-            // Log the error and return null or a default object
             return null;
         }
     }

@@ -1,101 +1,181 @@
 package com.example.swd392_gr03_eco.service.impl;
 
-import com.example.swd392_gr03_eco.model.dto.request.CartItemRequest;
-import com.example.swd392_gr03_eco.model.dto.response.CartDto;
-import com.example.swd392_gr03_eco.model.dto.response.CartItemDto;
+import com.example.swd392_gr03_eco.model.dto.request.AddToCartRequest;
+import com.example.swd392_gr03_eco.model.dto.request.UpdateCartItemRequest;
+import com.example.swd392_gr03_eco.model.dto.response.CartResponse;
+import com.example.swd392_gr03_eco.model.entities.Order;
+import com.example.swd392_gr03_eco.model.entities.OrderItem;
 import com.example.swd392_gr03_eco.model.entities.ProductImage;
 import com.example.swd392_gr03_eco.model.entities.ProductVariant;
+import com.example.swd392_gr03_eco.model.entities.User;
+import com.example.swd392_gr03_eco.repositories.OrderItemRepository;
+import com.example.swd392_gr03_eco.repositories.OrderRepository;
 import com.example.swd392_gr03_eco.repositories.ProductVariantRepository;
 import com.example.swd392_gr03_eco.service.interfaces.ICartService;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class CartServiceImpl implements ICartService {
 
+    private final OrderRepository orderRepository;
+    private final OrderItemRepository orderItemRepository;
     private final ProductVariantRepository productVariantRepository;
 
     @Override
-    public CartDto getCart(Object sessionCart) {
-        Map<Integer, CartItemDto> cart = castSessionCart(sessionCart);
-        return buildCartDto(cart);
+    @Transactional(readOnly = true)
+    public CartResponse getCartForUser(User user) {
+        Order cart = findCartByUser(user).orElse(createEmptyCart(user));
+        return mapOrderToCartResponse(cart);
     }
 
     @Override
-    public CartDto addItem(Object sessionCart, CartItemRequest request) {
-        Map<Integer, CartItemDto> cart = castSessionCart(sessionCart);
+    @Transactional
+    public CartResponse addItemToCart(User user, AddToCartRequest request) {
+        if (request.getQuantity() <= 0) {
+            throw new IllegalArgumentException("Quantity must be positive.");
+        }
+
+        Order cart = findOrCreateCart(user);
         ProductVariant variant = productVariantRepository.findById(request.getProductVariantId())
-                .orElseThrow(() -> new RuntimeException("Product variant not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Product variant not found"));
 
-        CartItemDto item = cart.get(variant.getId());
-        if (item != null) {
+        if (variant.getStockQuantity() < request.getQuantity()) {
+            throw new IllegalStateException("Not enough stock for product: " + variant.getProduct().getName());
+        }
+
+        Optional<OrderItem> existingItem = cart.getOrderItems().stream()
+                .filter(item -> item.getProductVariant().getId().equals(request.getProductVariantId()))
+                .findFirst();
+
+        if (existingItem.isPresent()) {
+            OrderItem item = existingItem.get();
             item.setQuantity(item.getQuantity() + request.getQuantity());
+            orderItemRepository.save(item);
         } else {
-            String imageUrl = null;
-            if (variant.getProduct() != null && variant.getProduct().getProductImages() != null) {
-                imageUrl = variant.getProduct().getProductImages().stream()
-                        .findFirst()
-                        .map(ProductImage::getImageUrl)
-                        .orElse(null);
-            }
-
-            item = CartItemDto.builder()
-                    .productVariantId(variant.getId())
-                    .productName(variant.getProduct().getName())
-                    .color(variant.getColor())
-                    .size(variant.getSize())
-                    .price(variant.getPriceOverride() != null ? variant.getPriceOverride() : variant.getProduct().getBasePrice())
+            OrderItem newItem = OrderItem.builder()
+                    .order(cart)
+                    .productVariant(variant)
                     .quantity(request.getQuantity())
-                    .imageUrl(imageUrl)
+                    .priceAtPurchase(variant.getProduct().getBasePrice()) // Or priceOverride if exists
                     .build();
-            cart.put(variant.getId(), item);
+            cart.getOrderItems().add(newItem);
+            orderItemRepository.save(newItem);
         }
-        return buildCartDto(cart);
+
+        return mapOrderToCartResponse(orderRepository.save(cart));
     }
 
     @Override
-    public CartDto updateItem(Object sessionCart, CartItemRequest request) {
-        Map<Integer, CartItemDto> cart = castSessionCart(sessionCart);
-        CartItemDto item = cart.get(request.getProductVariantId());
-        if (item != null) {
-            if (request.getQuantity() > 0) {
-                item.setQuantity(request.getQuantity());
-            } else {
-                cart.remove(request.getProductVariantId());
-            }
+    @Transactional
+    public CartResponse updateItemInCart(User user, Integer orderItemId, UpdateCartItemRequest request) {
+        if (request.getQuantity() <= 0) {
+            throw new IllegalArgumentException("Quantity must be positive.");
         }
-        return buildCartDto(cart);
+
+        Order cart = findCartByUser(user).orElseThrow(() -> new EntityNotFoundException("Cart not found"));
+        OrderItem itemToUpdate = orderItemRepository.findById(orderItemId)
+                .orElseThrow(() -> new EntityNotFoundException("Order item not found"));
+
+        if (!itemToUpdate.getOrder().getId().equals(cart.getId())) {
+            throw new SecurityException("Order item does not belong to the user's cart.");
+        }
+
+        if (itemToUpdate.getProductVariant().getStockQuantity() < request.getQuantity()) {
+            throw new IllegalStateException("Not enough stock.");
+        }
+
+        itemToUpdate.setQuantity(request.getQuantity());
+        orderItemRepository.save(itemToUpdate);
+
+        return mapOrderToCartResponse(cart);
     }
 
     @Override
-    public void removeItem(Object sessionCart, Integer productVariantId) {
-        Map<Integer, CartItemDto> cart = castSessionCart(sessionCart);
-        cart.remove(productVariantId);
-    }
+    @Transactional
+    public void removeItemFromCart(User user, Integer orderItemId) {
+        Order cart = findCartByUser(user).orElseThrow(() -> new EntityNotFoundException("Cart not found"));
+        OrderItem itemToRemove = orderItemRepository.findById(orderItemId)
+                .orElseThrow(() -> new EntityNotFoundException("Order item not found"));
 
-    private Map<Integer, CartItemDto> castSessionCart(Object sessionCart) {
-        if (sessionCart instanceof Map) {
-            return (Map<Integer, CartItemDto>) sessionCart;
+        if (!itemToRemove.getOrder().getId().equals(cart.getId())) {
+            throw new SecurityException("Order item does not belong to the user's cart.");
         }
-        return new HashMap<>();
+
+        orderItemRepository.delete(itemToRemove);
     }
 
-    private CartDto buildCartDto(Map<Integer, CartItemDto> cart) {
-        List<CartItemDto> items = new ArrayList<>(cart.values());
-        BigDecimal totalPrice = items.stream()
-                .map(item -> item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
+    private Order findOrCreateCart(User user) {
+        return findCartByUser(user).orElseGet(() -> {
+            Order newCart = Order.builder()
+                    .user(user)
+                    .status("CART")
+                    .orderItems(new ArrayList<>())
+                    .build();
+            return orderRepository.save(newCart);
+        });
+    }
+
+    private Optional<Order> findCartByUser(User user) {
+        return orderRepository.findByUserIdAndStatus(user.getId(), "CART");
+    }
+    
+    private Order createEmptyCart(User user) {
+        return Order.builder()
+            .user(user)
+            .status("CART")
+            .orderItems(new ArrayList<>())
+            .totalAmount(BigDecimal.ZERO)
+            .build();
+    }
+
+    private CartResponse mapOrderToCartResponse(Order order) {
+        List<CartResponse.CartItemResponse> itemResponses = order.getOrderItems().stream()
+                .map(this::mapOrderItemToCartItemResponse)
+                .collect(Collectors.toList());
+
+        BigDecimal totalAmount = itemResponses.stream()
+                .map(CartResponse.CartItemResponse::getItemTotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        // Persist the calculated total amount to the order
+        order.setTotalAmount(totalAmount);
+        orderRepository.save(order);
 
-        return CartDto.builder()
-                .items(items)
-                .totalPrice(totalPrice)
+        return CartResponse.builder()
+                .orderId(order.getId())
+                .status(order.getStatus())
+                .items(itemResponses)
+                .totalAmount(totalAmount)
+                .build();
+    }
+
+    private CartResponse.CartItemResponse mapOrderItemToCartItemResponse(OrderItem item) {
+        ProductVariant variant = item.getProductVariant();
+        String imageUrl = variant.getProduct().getProductImages().stream()
+                .filter(img -> img.getIsThumbnail() != null && img.getIsThumbnail())
+                .map(ProductImage::getImageUrl)
+                .findFirst()
+                .orElse(variant.getProduct().getProductImages().isEmpty() ? null : variant.getProduct().getProductImages().get(0).getImageUrl());
+
+        return CartResponse.CartItemResponse.builder()
+                .orderItemId(item.getId())
+                .productVariantId(variant.getId())
+                .productName(variant.getProduct().getName())
+                .variantInfo(String.format("%s, %s", variant.getColor(), variant.getSize()))
+                .imageUrl(imageUrl)
+                .price(item.getPriceAtPurchase())
+                .quantity(item.getQuantity())
+                .itemTotal(item.getPriceAtPurchase().multiply(BigDecimal.valueOf(item.getQuantity())))
                 .build();
     }
 }

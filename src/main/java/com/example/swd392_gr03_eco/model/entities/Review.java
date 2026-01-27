@@ -9,8 +9,8 @@ import java.sql.Timestamp;
 @Table(name = "reviews")
 @Getter
 @Setter
-@ToString(exclude = {"user", "product"})
-@EqualsAndHashCode(exclude = {"user", "product"})
+@ToString(exclude = {"user", "orderItem"})
+@EqualsAndHashCode(exclude = {"user", "orderItem"})
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -25,8 +25,8 @@ public class Review {
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_id")
-    private Product product;
+    @JoinColumn(name = "order_item_id")
+    private OrderItem orderItem;
 
     @Column(name = "rating")
     private Integer rating;
