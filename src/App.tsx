@@ -1,0 +1,428 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import LoginPage from "./user/login-page";
+import GuestLayout from "./pages/layouts/guest-layout";
+import UserLayout from "./pages/layouts/user-layout";
+import AdminLayout from "./pages/layouts/admin-layout";
+
+type UserRole = "guest" | "user" | "admin";
+
+interface Product {
+  id: string;
+  name: string;
+  category: string;
+  price: number;
+  rating: number;
+  reviews: number;
+  image: string;
+  images: string[];
+  sizes: string[];
+  colors: string[];
+  stock: Record<string, Record<string, number>>;
+  description: string;
+}
+
+interface CartItem {
+  id: string;
+  name: string;
+  price: number;
+  image: string;
+  size: string;
+  color: string;
+  quantity: number;
+}
+
+interface Order {
+  id: string;
+  date: string;
+  items: CartItem[];
+  total: number;
+  status: "pending" | "shipping" | "completed" | "cancelled";
+  shippingAddress: string;
+  paymentMethod: string;
+  userId: string;
+}
+
+interface Review {
+  id: string;
+  userId: string;
+  productId: string;
+  rating: number;
+  title: string;
+  comment: string;
+  date: string;
+  flagged: boolean;
+}
+
+interface User {
+  id: string;
+  email: string;
+  name: string;
+  blocked: boolean;
+}
+
+type PageType =
+  | "home"
+  | "products"
+  | "product-detail"
+  | "cart"
+  | "checkout"
+  | "orders"
+  | "order-detail"
+  | "login"
+  | "admin-dashboard"
+  | "admin-products"
+  | "admin-orders"
+  | "admin-reviews"
+  | "admin-users"
+  | "admin-analytics";
+
+// Mock product data
+const MOCK_PRODUCTS: Product[] = [
+  {
+    id: "1",
+    name: "Premium Oxford Shirt",
+    category: "Men",
+    price: 89.99,
+    rating: 4.8,
+    reviews: 245,
+    image: "/oxford-shirt-mens-fashion.jpg",
+    images: [
+      "/oxford-shirt-front.jpg",
+      "/oxford-shirt-detail.jpg",
+      "/oxford-shirt-back.jpg",
+    ],
+    sizes: ["XS", "S", "M", "L", "XL", "XXL"],
+    colors: ["White", "Blue", "Navy", "Pink"],
+    stock: {
+      White: { XS: 5, S: 8, M: 12, L: 10, XL: 6, XXL: 2 },
+      Blue: { XS: 3, S: 6, M: 9, L: 8, XL: 4, XXL: 1 },
+      Navy: { XS: 4, S: 7, M: 10, L: 11, XL: 5, XXL: 2 },
+      Pink: { XS: 2, S: 4, M: 6, L: 5, XL: 3, XXL: 0 },
+    },
+    description:
+      "Classic oxford button-up shirt in premium cotton blend. Perfect for any occasion.",
+  },
+  {
+    id: "2",
+    name: "Classic Denim Jeans",
+    category: "Men",
+    price: 79.99,
+    rating: 4.6,
+    reviews: 189,
+    image: "/denim-jeans-mens-blue.jpg",
+    images: [
+      "/denim-jeans-front.jpg",
+      "/denim-jeans-detail.jpg",
+      "/denim-jeans-back.jpg",
+    ],
+    sizes: ["28", "30", "32", "34", "36", "38"],
+    colors: ["Light Blue", "Dark Blue", "Black"],
+    stock: {
+      "Light Blue": { "28": 6, "30": 9, "32": 12, "34": 10, "36": 5, "38": 2 },
+      "Dark Blue": { "28": 4, "30": 7, "32": 10, "34": 8, "36": 4, "38": 1 },
+      Black: { "28": 5, "30": 8, "32": 11, "34": 9, "36": 5, "38": 2 },
+    },
+    description:
+      "Timeless denim jeans with perfect fit and comfort. Durable 100% cotton construction.",
+  },
+  {
+    id: "3",
+    name: "Elegant Summer Dress",
+    category: "Women",
+    price: 129.99,
+    rating: 4.9,
+    reviews: 312,
+    image: "/summer-dress-women-elegant.jpg",
+    images: [
+      "/summer-dress-front.png",
+      "/summer-dress-detail.png",
+      "/summer-dress-back.png",
+    ],
+    sizes: ["XS", "S", "M", "L", "XL"],
+    colors: ["Cream", "Coral", "Navy Blue"],
+    stock: {
+      Cream: { XS: 7, S: 10, M: 14, L: 9, XL: 4 },
+      Coral: { XS: 5, S: 8, M: 11, L: 7, XL: 3 },
+      "Navy Blue": { XS: 6, S: 9, M: 12, L: 8, XL: 4 },
+    },
+    description:
+      "Flowing summer dress perfect for warm weather. Breathable fabric with elegant styling.",
+  },
+  {
+    id: "4",
+    name: "Luxury Leather Handbag",
+    category: "Accessories",
+    price: 249.99,
+    rating: 4.7,
+    reviews: 156,
+    image: "/leather-handbag-luxury.jpg",
+    images: [
+      "/leather-handbag-front.jpg",
+      "/leather-handbag-detail.jpg",
+      "/leather-handbag-back.jpg",
+    ],
+    sizes: ["One Size"],
+    colors: ["Black", "Camel", "Cognac"],
+    stock: {
+      Black: { "One Size": 8 },
+      Camel: { "One Size": 6 },
+      Cognac: { "One Size": 5 },
+    },
+    description:
+      "Premium leather handbag crafted with Italian leather. Timeless design with excellent durability.",
+  },
+  {
+    id: "5",
+    name: "Designer Sunglasses",
+    category: "Accessories",
+    price: 199.99,
+    rating: 4.8,
+    reviews: 128,
+    image: "/designer-sunglasses-fashion.jpg",
+    images: [
+      "/sunglasses-front.jpg",
+      "/sunglasses-detail.jpg",
+      "/placeholder.svg?height=500&width=500",
+    ],
+    sizes: ["One Size"],
+    colors: ["Black", "Brown", "Gold"],
+    stock: {
+      Black: { "One Size": 12 },
+      Brown: { "One Size": 10 },
+      Gold: { "One Size": 8 },
+    },
+    description:
+      "Premium UV protection with stylish frame design. Perfect for any season.",
+  },
+  {
+    id: "6",
+    name: "Athletic Running Shoes",
+    category: "Accessories",
+    price: 159.99,
+    rating: 4.5,
+    reviews: 203,
+    image: "/placeholder.svg?height=300&width=300",
+    images: [
+      "/placeholder.svg?height=500&width=500",
+      "/placeholder.svg?height=500&width=500",
+      "/placeholder.svg?height=500&width=500",
+    ],
+    sizes: ["6", "7", "8", "9", "10", "11", "12", "13"],
+    colors: ["White", "Black", "Red", "Blue"],
+    stock: {
+      White: {
+        "6": 4,
+        "7": 5,
+        "8": 6,
+        "9": 7,
+        "10": 8,
+        "11": 6,
+        "12": 4,
+        "13": 2,
+      },
+      Black: {
+        "6": 3,
+        "7": 4,
+        "8": 5,
+        "9": 6,
+        "10": 7,
+        "11": 5,
+        "12": 3,
+        "13": 1,
+      },
+      Red: {
+        "6": 2,
+        "7": 3,
+        "8": 4,
+        "9": 5,
+        "10": 6,
+        "11": 4,
+        "12": 2,
+        "13": 1,
+      },
+      Blue: {
+        "6": 3,
+        "7": 4,
+        "8": 5,
+        "9": 6,
+        "10": 7,
+        "11": 5,
+        "12": 3,
+        "13": 1,
+      },
+    },
+    description:
+      "Comfortable running shoes with advanced cushioning technology. Lightweight and breathable.",
+  },
+];
+
+// Mock reviews data
+const MOCK_REVIEWS: Review[] = [
+  {
+    id: "1",
+    userId: "2",
+    productId: "1",
+    rating: 5,
+    title: "Perfect shirt!",
+    comment: "Great quality and fit. Will definitely buy again.",
+    date: "2025-01-10",
+    flagged: false,
+  },
+  {
+    id: "2",
+    userId: "3",
+    productId: "3",
+    rating: 4,
+    title: "Great summer dress",
+    comment: "Beautiful dress, very comfortable.",
+    date: "2025-01-08",
+    flagged: false,
+  },
+  {
+    id: "3",
+    userId: "4",
+    productId: "4",
+    rating: 5,
+    title: "Excellent quality",
+    comment: "Looks exactly like the photos. Premium leather!",
+    date: "2025-01-05",
+    flagged: false,
+  },
+];
+
+// Mock users data
+const MOCK_USERS: User[] = [
+  { id: "1", email: "admin@example.com", name: "Admin User", blocked: false },
+  { id: "2", email: "john@example.com", name: "John Doe", blocked: false },
+  { id: "3", email: "jane@example.com", name: "Jane Smith", blocked: false },
+  { id: "4", email: "bob@example.com", name: "Bob Johnson", blocked: false },
+];
+
+// Mock orders data
+const MOCK_ORDERS: Order[] = [
+  {
+    id: "ORD-001",
+    date: "2025-01-10",
+    items: [
+      {
+        id: "1",
+        name: "Premium Oxford Shirt",
+        price: 89.99,
+        image: "/oxford-shirt-mens-fashion.jpg",
+        size: "M",
+        color: "Blue",
+        quantity: 1,
+      },
+    ],
+    total: 89.99,
+    status: "shipping",
+    shippingAddress: "123 Main St, New York, NY 10001",
+    paymentMethod: "VNPay",
+    userId: "2",
+  },
+  {
+    id: "ORD-002",
+    date: "2025-01-08",
+    items: [
+      {
+        id: "3",
+        name: "Elegant Summer Dress",
+        price: 129.99,
+        image: "/summer-dress-women-elegant.jpg",
+        size: "S",
+        color: "Coral",
+        quantity: 1,
+      },
+    ],
+    total: 129.99,
+    status: "completed",
+    shippingAddress: "456 Oak Ave, Los Angeles, CA 90001",
+    paymentMethod: "MoMo",
+    userId: "3",
+  },
+];
+
+export default function HomePage() {
+  const [role, setRole] = useState<UserRole>("guest");
+  const [currentPage, setCurrentPage] = useState<PageType>("home");
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [orders, setOrders] = useState<Order[]>(MOCK_ORDERS);
+  const [products, setProducts] = useState<Product[]>(MOCK_PRODUCTS);
+  const [reviews, setReviews] = useState<Review[]>(MOCK_REVIEWS);
+  const [users, setUsers] = useState<User[]>(MOCK_USERS);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(
+    null
+  );
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [role]);
+
+  if (currentPage === "login") {
+    return (
+      <LoginPage
+        onLogin={(email: string, role: UserRole) => {
+          setRole(role);
+          setCurrentPage(role === "admin" ? "admin-dashboard" : "home");
+        }}
+      />
+    );
+  }
+
+  if (role === "admin") {
+    return (
+      <AdminLayout
+        role={role}
+        setRole={setRole}
+        currentPage={currentPage}
+        setCurrentPage={setCurrentPage}
+        products={products}
+        setProducts={setProducts}
+        orders={orders}
+        setOrders={setOrders}
+        reviews={reviews}
+        setReviews={setReviews}
+        users={users}
+        setUsers={setUsers}
+      />
+    );
+  }
+
+  if (role === "user") {
+    return (
+      <UserLayout
+        currentPage={currentPage}
+        setCurrentPage={setCurrentPage}
+        setRole={setRole}
+        cart={cart}
+        setCart={setCart}
+        orders={orders}
+        setOrders={setOrders}
+        products={products}
+        selectedCategory={selectedCategory}
+        setSelectedCategory={setSelectedCategory}
+        selectedProductId={selectedProductId}
+        setSelectedProductId={setSelectedProductId}
+        selectedOrderId={selectedOrderId}
+        setSelectedOrderId={setSelectedOrderId}
+      />
+    );
+  }
+
+  return (
+    <GuestLayout
+      currentPage={currentPage}
+      setCurrentPage={setCurrentPage}
+      setRole={setRole}
+      products={products}
+      selectedCategory={selectedCategory}
+      setSelectedCategory={setSelectedCategory}
+      selectedProductId={selectedProductId}
+      setSelectedProductId={setSelectedProductId}
+    />
+  );
+}
