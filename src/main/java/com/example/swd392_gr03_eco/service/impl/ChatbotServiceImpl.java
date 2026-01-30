@@ -5,9 +5,11 @@ import com.example.swd392_gr03_eco.model.dto.ai.AiResponse;
 import com.example.swd392_gr03_eco.model.dto.request.ChatRequest;
 import com.example.swd392_gr03_eco.model.dto.response.ChatResponse;
 import com.example.swd392_gr03_eco.model.entities.Product;
+import com.example.swd392_gr03_eco.model.entities.User;
 import com.example.swd392_gr03_eco.repositories.ProductRepository;
 import com.example.swd392_gr03_eco.service.interfaces.IChatbotService;
-import com.example.swd392_gr03_eco.service.interfaces.IEmbeddingService;
+import dev.langchain4j.data.embedding.Embedding;
+import dev.langchain4j.model.embedding.EmbeddingModel;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -19,80 +21,100 @@ import org.springframework.web.client.RestTemplate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @Service
 @RequiredArgsConstructor
 public class ChatbotServiceImpl implements IChatbotService {
 
-    private final IEmbeddingService embeddingService;
+    private final EmbeddingModel embeddingModel;
     private final ProductRepository productRepository;
     private final RestTemplate restTemplate = new RestTemplate();
 
     @Value("${ai.api.key}")
     private String apiKey;
+
     @Value("${ai.api.url}")
     private String apiUrl;
+
     @Value("${ai.model}")
     private String model;
 
     @Override
-    public ChatResponse getStatelessReply(ChatRequest request) {
-        String userMessage = request.getMessage();
+    public ChatResponse getStatelessReply(User user, ChatRequest request) {
+        try {
+            String userMessage = request.getMessage();
 
-        // 1. Find relevant products based on the latest user message
-        float[] queryEmbedding = embeddingService.getEmbedding(userMessage);
-        List<Product> relevantProducts = productRepository.findNearestNeighbors(queryEmbedding, 5);
+            Embedding embedding = embeddingModel.embed(userMessage).content();
+            float[] vector = embedding.vector();
+            String vectorString = IntStream.range(0, vector.length)
+                                         .mapToObj(i -> String.valueOf(vector[i]))
+                                         .collect(Collectors.joining(",", "[", "]"));
 
-        // 2. Build prompt and call AI
-        String botReply = callAi(request.getHistory(), relevantProducts, userMessage);
+            List<Product> relevantProducts = productRepository.findNearestNeighbors(vectorString, 5);
 
-        // 3. Return the response
-        return ChatResponse.builder()
-                .botMessage(botReply)
-                .build();
+            String botReply = callAi(user, request.getHistory(), relevantProducts, userMessage);
+
+            return ChatResponse.builder().botMessage(botReply).build();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ChatResponse.builder().botMessage("Lỗi hệ thống: " + e.getMessage()).build();
+        }
     }
 
-    private String callAi(List<ChatRequest.Message> history, List<Product> products, String userMessage) {
-        List<AiRequest.Message> messages = new ArrayList<>();
-        messages.add(new AiRequest.Message("system", "You are a helpful and friendly e-commerce assistant. Your goal is to help the user find the perfect product."));
-
-        // Add conversation history from the request
-        if (history != null) {
-            history.forEach(msg -> messages.add(new AiRequest.Message(msg.getRole(), msg.getContent())));
-        }
-
-        // Add product context
-        String productInfo = products.stream()
-                .map(p -> String.format("- ID: %d, Name: %s, Description: %s, Price: %.2f",
-                        p.getId(), p.getName(), p.getDescription(), p.getBasePrice()))
+    private String callAi(User user, List<ChatRequest.Message> history, List<Product> products, String userMessage) {
+        String productContext = products.isEmpty()
+                ? "Không tìm thấy sản phẩm nào phù hợp trong kho."
+                : products.stream()
+                .map(p -> String.format("- Tên: %s | Giá: %s | Mô tả: %s",
+                        p.getName(), p.getBasePrice(), p.getDescription()))
                 .collect(Collectors.joining("\n"));
 
-        String contextPrompt = String.format(
-                "Based on the conversation history and the following potentially relevant products, answer the user's last message. " +
-                "If the products seem relevant, recommend them. If not, ask for more details. Keep your answers concise and friendly.\n\n" +
-                "--- Relevant Products ---\n%s\n\n",
-                productInfo.isEmpty() ? "No specific products found." : productInfo
-        );
-        
-        // Add the latest user message with the context
-        messages.add(new AiRequest.Message("user", contextPrompt + userMessage));
+        String systemPrompt = """
+                Bạn là nhân viên tư vấn bán hàng nhiệt tình và chuyên nghiệp.
+                Dưới đây là danh sách sản phẩm liên quan tìm được từ kho:
+                %s
+                
+                Hãy dùng thông tin trên để trả lời câu hỏi của khách hàng.
+                Nếu không có sản phẩm nào phù hợp, hãy gợi ý khách hàng hỏi về chủ đề khác.
+                Chỉ trả lời dựa trên thông tin được cung cấp.
+                """.formatted(productContext);
+
+        List<AiRequest.Message> messages = new ArrayList<>();
+        messages.add(new AiRequest.Message("system", systemPrompt));
+
+        if (history != null) {
+            for (ChatRequest.Message msg : history) {
+                String role = "bot".equalsIgnoreCase(msg.getRole()) ? "assistant" : "user";
+                messages.add(new AiRequest.Message(role, msg.getContent()));
+            }
+        }
+        messages.add(new AiRequest.Message("user", userMessage));
+
+        AiRequest aiRequest = AiRequest.builder()
+                .model(model)
+                .messages(messages)
+                .temperature(0.7)
+                .build();
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(apiKey);
-
-        AiRequest aiRequest = new AiRequest(model, messages, 0.7);
-        HttpEntity<AiRequest> entity = new HttpEntity<>(aiRequest, headers);
+        if (!apiUrl.contains("goog")) {
+            headers.setBearerAuth(apiKey);
+        }
 
         try {
-            AiResponse response = restTemplate.postForObject(apiUrl, entity, AiResponse.class);
+            String finalUrl = apiUrl.contains("goog") ? apiUrl + "?key=" + apiKey : apiUrl;
+            HttpEntity<AiRequest> entity = new HttpEntity<>(aiRequest, headers);
+            AiResponse response = restTemplate.postForObject(finalUrl, entity, AiResponse.class);
+
             if (response != null && !response.getChoices().isEmpty()) {
-                return response.getChoices().get(0).getMessage().getContent().trim();
+                return response.getChoices().get(0).getMessage().getContent();
             }
         } catch (Exception e) {
-            System.err.println("Error calling AI API: " + e.getMessage());
-            return "I'm sorry, I'm having a little trouble right now. Please try again in a moment.";
+            System.err.println("Lỗi gọi AI API: " + e.getMessage());
+            return "Xin lỗi, tôi đang gặp sự cố khi kết nối với bộ não AI. Vui lòng thử lại sau.";
         }
-        return "I'm sorry, I couldn't generate a response.";
+        return "Xin lỗi, tôi không có câu trả lời cho vấn đề này.";
     }
 }

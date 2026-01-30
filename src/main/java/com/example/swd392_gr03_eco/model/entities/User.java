@@ -9,17 +9,14 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @Entity
 @Table(name = "users")
 @Getter
 @Setter
-@ToString(exclude = {"userRoles", "orders", "reviews"})
-@EqualsAndHashCode(exclude = {"userRoles", "orders", "reviews"})
+@ToString(exclude = {"role", "orders", "reviews"}) // Exclude role
+@EqualsAndHashCode(exclude = {"role", "orders", "reviews"})
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -44,9 +41,11 @@ public class User implements UserDetails {
     @Column(name = "created_at")
     private Timestamp createdAt;
 
-    @OneToMany(mappedBy = "user", fetch = FetchType.EAGER)
-    @Builder.Default
-    private Set<UserRole> userRoles = new HashSet<>();
+    // --- SỬA ĐỔI Ở ĐÂY: 1 User có 1 Role ---
+    @ManyToOne(fetch = FetchType.EAGER) // Load Role ngay lập tức khi load User để check quyền
+    @JoinColumn(name = "role_id", nullable = false) // Tạo cột role_id trong bảng users
+    private Role role;
+    // ---------------------------------------
 
     @OneToMany(mappedBy = "user")
     @Builder.Default
@@ -56,44 +55,33 @@ public class User implements UserDetails {
     @Builder.Default
     private List<Review> reviews = new ArrayList<>();
 
+    @Column(name = "is_active")
+    @Builder.Default
+    private boolean isActive = true;
+
     // UserDetails implementation
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        if (userRoles == null) {
-            return List.of();
-        }
-        return userRoles.stream()
-                .map(userRole -> new SimpleGrantedAuthority(userRole.getRole().getRoleName()))
-                .collect(Collectors.toList());
+        // Trả về List chứa đúng 1 role duy nhất
+        if (role == null) return List.of();
+        return List.of(new SimpleGrantedAuthority(role.getRoleName()));
     }
 
     @Override
-    public String getPassword() {
-        return passwordHash;
-    }
+    public String getPassword() { return passwordHash; }
 
     @Override
-    public String getUsername() {
-        return email;
-    }
+    public String getUsername() { return email; }
 
     @Override
-    public boolean isAccountNonExpired() {
-        return true;
-    }
+    public boolean isAccountNonExpired() { return true; }
 
     @Override
-    public boolean isAccountNonLocked() {
-        return true;
-    }
+    public boolean isAccountNonLocked() { return true; }
 
     @Override
-    public boolean isCredentialsNonExpired() {
-        return true;
-    }
+    public boolean isCredentialsNonExpired() { return true; }
 
     @Override
-    public boolean isEnabled() {
-        return true;
-    }
+    public boolean isEnabled() { return true; }
 }

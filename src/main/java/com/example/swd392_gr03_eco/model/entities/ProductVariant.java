@@ -1,4 +1,4 @@
-package com.example.swd392_gr03_eco.model.entities;
+package com.example.swd392_gr03_eco.model.entities; // Đảm bảo package này thuộc phạm vi quét của PrimaryDbConfig
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
@@ -32,10 +32,15 @@ public class ProductVariant {
     private String sku;
 
     @Column(name = "color")
-    private String color;
+    private String color; // Ví dụ: "Xanh Navy", "Đỏ Đô"
 
     @Column(name = "size")
-    private String size;
+    private String size;  // Ví dụ: "XL", "42"
+
+    // --- THÊM TRƯỜNG NÀY THEO YÊU CẦU ---
+    @Column(name = "material")
+    private String material; // Ví dụ: "Cotton", "Lụa", "Jean"
+    // ------------------------------------
 
     @Column(name = "price_override")
     private BigDecimal priceOverride;

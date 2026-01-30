@@ -15,4 +15,6 @@ public interface UserRepository extends JpaRepository<User, Integer> {
     // --- Dashboard Queries ---
     @Query("SELECT COUNT(u) FROM User u WHERE u.createdAt >= :since")
     Long countNewUsersSince(Instant since);
+
+    boolean existsByEmail(String email);
 }

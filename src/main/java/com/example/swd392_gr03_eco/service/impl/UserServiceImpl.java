@@ -6,7 +6,6 @@ import com.example.swd392_gr03_eco.repositories.UserRepository;
 import com.example.swd392_gr03_eco.service.interfaces.IUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor

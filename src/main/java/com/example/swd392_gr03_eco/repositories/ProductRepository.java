@@ -11,8 +11,17 @@ import java.util.List;
 
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Integer>, JpaSpecificationExecutor<Product> {
-    List<Product> findByIsActiveTrue();
 
-    @Query(value = "SELECT * FROM products ORDER BY H2VECTOR_COSINE(vector_embedding, :query_embedding) LIMIT :limit", nativeQuery = true)
-    List<Product> findNearestNeighbors(@Param("query_embedding") float[] queryEmbedding, @Param("limit") int limit);
+    /**
+     * Finds the top N nearest neighbors to a given vector using cosine distance.
+     * The '<->' operator in pgvector calculates the cosine distance (1 - cosine similarity).
+     * A smaller distance means a better match.
+     * The query casts the input string to a vector.
+     *
+     * @param embedding The vector to compare against, as a String in the format "[1.0,2.0,...]".
+     * @param limit The maximum number of neighbors to return.
+     * @return A list of the nearest products.
+     */
+    @Query(value = "SELECT * FROM products ORDER BY vector_embedding <-> CAST(:embedding AS vector) LIMIT :limit", nativeQuery = true)
+    List<Product> findNearestNeighbors(@Param("embedding") String embedding, @Param("limit") int limit);
 }

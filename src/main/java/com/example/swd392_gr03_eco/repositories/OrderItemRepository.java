@@ -1,6 +1,7 @@
 package com.example.swd392_gr03_eco.repositories;
 
 import com.example.swd392_gr03_eco.model.dto.response.TopSellingProductDto;
+import com.example.swd392_gr03_eco.model.entities.Order;
 import com.example.swd392_gr03_eco.model.entities.OrderItem;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -16,4 +17,6 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, Integer> {
            "GROUP BY oi.productVariant.product.id, oi.productVariant.product.name " +
            "ORDER BY SUM(oi.quantity) DESC")
     List<TopSellingProductDto> findTopSellingProducts();
+
+    List<OrderItem> findByOrder(Order order);
 }

@@ -122,7 +122,6 @@ public class OrderServiceImpl implements IOrderService {
         try {
             return objectMapper.readValue(json, CheckoutRequest.AddressInfo.class);
         } catch (Exception e) {
-            // Log the error and return null or a default object
             return null;
         }
     }

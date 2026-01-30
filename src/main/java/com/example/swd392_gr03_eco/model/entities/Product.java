@@ -2,6 +2,7 @@ package com.example.swd392_gr03_eco.model.entities;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.ColumnTransformer;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
@@ -30,7 +31,7 @@ public class Product {
     private String description;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "category_id")
+    @JoinColumn(name = "category_id", nullable = false)
     private Category category;
 
     @Column(name = "brand_name")
@@ -40,20 +41,22 @@ public class Product {
     private BigDecimal basePrice;
 
     @Column(name = "is_active")
-    private Boolean isActive;
+    @Builder.Default
+    private Boolean isActive = true;
 
-    @Lob
-    @Column(name = "vector_embedding", columnDefinition = "TEXT")
+    // FIX: Add @ColumnTransformer to cast the String to a vector on write operations.
+    @Column(name = "vector_embedding", columnDefinition = "vector(384)")
+    @ColumnTransformer(write = "CAST(? AS vector)")
     private String vectorEmbedding;
 
     @Column(name = "created_at")
     private Timestamp createdAt;
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
-    @Builder.Default // Ensure builder initializes the collection
+    @Builder.Default
     private List<ProductVariant> productVariants = new ArrayList<>();
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
-    @Builder.Default // Ensure builder initializes the collection
+    @Builder.Default
     private List<ProductImage> productImages = new ArrayList<>();
 }
