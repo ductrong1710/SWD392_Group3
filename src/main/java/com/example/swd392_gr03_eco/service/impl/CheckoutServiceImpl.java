@@ -14,7 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.sql.Timestamp;
+import java.time.Instant; // Import Instant
 
 @Service
 @RequiredArgsConstructor
@@ -56,9 +56,8 @@ public class CheckoutServiceImpl implements ICheckoutService {
         
         cart.setFinalAmount(cart.getTotalAmount());
         
-        // Special handling for COD
         if ("COD".equalsIgnoreCase(request.getPaymentMethod())) {
-            cart.setStatus("COMPLETED"); // Or "PROCESSING" if you have a shipping step
+            cart.setStatus("COMPLETED");
             Order completedOrder = orderRepository.save(cart);
 
             Payment payment = Payment.builder()
@@ -66,17 +65,16 @@ public class CheckoutServiceImpl implements ICheckoutService {
                 .user(user)
                 .method("COD")
                 .status("SUCCESS")
-                .paidAt(new Timestamp(System.currentTimeMillis()))
+                .paidAt(Instant.now()) // Use Instant.now()
                 .build();
             paymentRepository.save(payment);
 
             return CheckoutResponse.builder()
-                .paymentUrl("/checkout-success?orderId=" + completedOrder.getId() + "&status=SUCCESS") // No external URL needed
+                .paymentUrl("/checkout-success?orderId=" + completedOrder.getId() + "&status=SUCCESS")
                 .orderId(completedOrder.getId())
                 .build();
         }
 
-        // For other methods like VNPAY
         cart.setStatus("AWAITING_PAYMENT");
         Order processingOrder = orderRepository.save(cart);
         String paymentUrl = paymentService.createPayment(processingOrder, request.getPaymentMethod());

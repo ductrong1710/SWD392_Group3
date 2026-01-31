@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
-import java.sql.Timestamp;
+import java.time.Instant; // Import Instant
 import java.util.ArrayList;
 import java.util.List;
 
@@ -49,7 +49,7 @@ public class Order {
     private String trackingCode;
 
     @Column(name = "created_at")
-    private Timestamp createdAt;
+    private Instant createdAt; // Change to Instant
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
     @Builder.Default

@@ -12,7 +12,7 @@ import com.example.swd392_gr03_eco.service.interfaces.IReviewService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.sql.Timestamp;
+import java.time.Instant; // Import Instant
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -29,17 +29,14 @@ public class ReviewServiceImpl implements IReviewService {
         OrderItem orderItem = orderItemRepository.findById(request.getOrderItemId())
                 .orElseThrow(() -> new RuntimeException("Order item not found"));
 
-        // 1. Check if the user owns the order item
         if (!orderItem.getOrder().getUser().getId().equals(userId.intValue())) {
             throw new SecurityException("You can only review items from your own orders.");
         }
         
-        // 2. Check if the order is completed
         if (!"COMPLETED".equals(orderItem.getOrder().getStatus())) {
             throw new RuntimeException("You can only review items from completed orders.");
         }
 
-        // 3. Check if user has already reviewed this order item
         boolean hasReviewed = reviewRepository.existsByOrderItemId(request.getOrderItemId());
         if (hasReviewed) {
             throw new RuntimeException("You have already reviewed this item.");
@@ -52,7 +49,7 @@ public class ReviewServiceImpl implements IReviewService {
                 .orderItem(orderItem)
                 .rating(request.getRating())
                 .comment(request.getComment())
-                .createdAt(new Timestamp(System.currentTimeMillis()))
+                .createdAt(Instant.now()) // Use Instant.now()
                 .build();
 
         Review savedReview = reviewRepository.save(review);

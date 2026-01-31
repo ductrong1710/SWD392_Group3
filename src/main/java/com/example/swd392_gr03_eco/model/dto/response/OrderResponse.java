@@ -5,7 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.math.BigDecimal;
-import java.sql.Timestamp;
+import java.time.Instant; // Import Instant
 import java.util.List;
 
 @Data
@@ -13,7 +13,7 @@ import java.util.List;
 public class OrderResponse {
     private Integer orderId;
     private String status;
-    private Timestamp orderDate;
+    private Instant orderDate; // Change to Instant
     private CheckoutRequest.AddressInfo shippingAddress;
     private List<OrderItemResponse> items;
     private BigDecimal totalAmount;

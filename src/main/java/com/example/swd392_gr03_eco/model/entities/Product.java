@@ -5,7 +5,7 @@ import lombok.*;
 import org.hibernate.annotations.ColumnTransformer;
 
 import java.math.BigDecimal;
-import java.sql.Timestamp;
+import java.time.Instant; // Import Instant
 import java.util.ArrayList;
 import java.util.List;
 
@@ -44,13 +44,12 @@ public class Product {
     @Builder.Default
     private Boolean isActive = true;
 
-    // FIX: Add @ColumnTransformer to cast the String to a vector on write operations.
     @Column(name = "vector_embedding", columnDefinition = "vector(384)")
     @ColumnTransformer(write = "CAST(? AS vector)")
     private String vectorEmbedding;
 
     @Column(name = "created_at")
-    private Timestamp createdAt;
+    private Instant createdAt; // Change to Instant
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
     @Builder.Default

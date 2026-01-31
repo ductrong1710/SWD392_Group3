@@ -20,7 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.sql.Timestamp;
+import java.time.Instant; // Import Instant
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -77,7 +77,7 @@ public class ProductServiceImpl implements IProductService {
                 .brandName(request.getBrandName())
                 .basePrice(request.getBasePrice())
                 .isActive(true)
-                .createdAt(new Timestamp(System.currentTimeMillis()))
+                .createdAt(Instant.now()) // Use Instant.now()
                 .build();
 
         List<ProductVariant> variants = new ArrayList<>();
@@ -92,7 +92,6 @@ public class ProductServiceImpl implements IProductService {
         }
         product.setProductVariants(variants);
         
-        // Generate and set the vector after variants are associated
         updateVectorForProduct(product);
 
         return productRepository.save(product);
@@ -106,11 +105,7 @@ public class ProductServiceImpl implements IProductService {
         product.setDescription(request.getDescription());
         product.setBrandName(request.getBrandName());
         product.setBasePrice(request.getBasePrice());
-
-        // NOTE: This simple update does not handle variant updates.
-        // A more complex logic would be needed to add/remove/update variants.
         
-        // Re-generate embedding on update
         updateVectorForProduct(product);
 
         return productRepository.save(product);

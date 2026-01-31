@@ -3,7 +3,7 @@ package com.example.swd392_gr03_eco.model.entities;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.sql.Timestamp;
+import java.time.Instant; // Import Instant
 
 @Entity
 @Table(name = "payments")
@@ -41,5 +41,5 @@ public class Payment {
     private String rawResponseLog;
 
     @Column(name = "paid_at")
-    private Timestamp paidAt;
+    private Instant paidAt; // Change to Instant
 }

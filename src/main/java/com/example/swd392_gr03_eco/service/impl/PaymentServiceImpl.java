@@ -18,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import java.sql.Timestamp;
+import java.time.Instant; // Import Instant
 import java.util.Map;
 
 @Service
@@ -96,7 +96,7 @@ public class PaymentServiceImpl implements IPaymentService {
         payment.setStatus(status);
         payment.setRawResponseLog(rawResponse);
         if ("SUCCESS".equals(status)) {
-            payment.setPaidAt(new Timestamp(System.currentTimeMillis()));
+            payment.setPaidAt(Instant.now()); // Use Instant.now()
         }
         paymentRepository.save(payment);
     }

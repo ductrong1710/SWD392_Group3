@@ -6,7 +6,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import java.sql.Timestamp;
+import java.time.Instant; // Import Instant
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -15,7 +15,7 @@ import java.util.List;
 @Table(name = "users")
 @Getter
 @Setter
-@ToString(exclude = {"role", "orders", "reviews"}) // Exclude role
+@ToString(exclude = {"role", "orders", "reviews"})
 @EqualsAndHashCode(exclude = {"role", "orders", "reviews"})
 @NoArgsConstructor
 @AllArgsConstructor
@@ -39,13 +39,11 @@ public class User implements UserDetails {
     private String phone;
 
     @Column(name = "created_at")
-    private Timestamp createdAt;
+    private Instant createdAt; // Change to Instant
 
-    // --- SỬA ĐỔI Ở ĐÂY: 1 User có 1 Role ---
-    @ManyToOne(fetch = FetchType.EAGER) // Load Role ngay lập tức khi load User để check quyền
-    @JoinColumn(name = "role_id", nullable = false) // Tạo cột role_id trong bảng users
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "role_id", nullable = false)
     private Role role;
-    // ---------------------------------------
 
     @OneToMany(mappedBy = "user")
     @Builder.Default
@@ -62,7 +60,6 @@ public class User implements UserDetails {
     // UserDetails implementation
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // Trả về List chứa đúng 1 role duy nhất
         if (role == null) return List.of();
         return List.of(new SimpleGrantedAuthority(role.getRoleName()));
     }

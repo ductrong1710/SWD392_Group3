@@ -3,7 +3,7 @@ package com.example.swd392_gr03_eco.model.entities;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.sql.Timestamp;
+import java.time.Instant; // Import Instant
 
 @Entity
 @Table(name = "reviews")
@@ -35,5 +35,5 @@ public class Review {
     private String comment;
 
     @Column(name = "created_at")
-    private Timestamp createdAt;
+    private Instant createdAt; // Change to Instant
 }

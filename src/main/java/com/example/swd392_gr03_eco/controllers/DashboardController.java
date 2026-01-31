@@ -1,5 +1,6 @@
 package com.example.swd392_gr03_eco.controllers;
 
+import com.example.swd392_gr03_eco.model.dto.response.DashboardStatsDto;
 import com.example.swd392_gr03_eco.service.interfaces.IDashboardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -9,15 +10,15 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/admin/dashboard")
+@RequestMapping("/api/dashboard")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyAuthority('ADMIN', 'STAFF')")
 public class DashboardController {
 
     private final IDashboardService dashboardService;
 
     @GetMapping("/stats")
-    public ResponseEntity<?> getDashboardStats() {
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'STAFF')")
+    public ResponseEntity<DashboardStatsDto> getDashboardStats() {
         return ResponseEntity.ok(dashboardService.getDashboardStats());
     }
 }

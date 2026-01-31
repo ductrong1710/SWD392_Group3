@@ -3,7 +3,7 @@ package com.example.swd392_gr03_eco.model.dto.response;
 import lombok.Builder;
 import lombok.Data;
 
-import java.sql.Timestamp;
+import java.time.Instant; // Import Instant
 
 @Data
 @Builder
@@ -12,5 +12,5 @@ public class ReviewResponseDto {
     private String userName;
     private int rating;
     private String comment;
-    private Timestamp createdAt;
+    private Instant createdAt; // Change to Instant
 }
