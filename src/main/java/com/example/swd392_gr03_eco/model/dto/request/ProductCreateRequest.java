@@ -19,5 +19,6 @@ public class ProductCreateRequest {
         private String size;
         private BigDecimal priceOverride; // Changed from Double to BigDecimal
         private Integer stockQuantity;
+        private String material;
     }
 }

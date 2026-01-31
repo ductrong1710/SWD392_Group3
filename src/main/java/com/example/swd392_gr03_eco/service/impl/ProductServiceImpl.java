@@ -23,6 +23,7 @@ import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -69,13 +70,6 @@ public class ProductServiceImpl implements IProductService {
         Category category = categoryRepository.findByName(categoryName)
                 .orElseGet(() -> categoryRepository.findByName("Uncategorized").orElse(null));
 
-        String embeddingText = request.getName() + " " + request.getDescription();
-        Embedding embedding = embeddingModel.embed(embeddingText).content();
-        float[] vector = embedding.vector();
-        String vectorString = IntStream.range(0, vector.length)
-                                     .mapToObj(i -> String.valueOf(vector[i]))
-                                     .collect(Collectors.joining(",", "[", "]"));
-
         Product product = Product.builder()
                 .name(request.getName())
                 .description(request.getDescription())
@@ -84,7 +78,6 @@ public class ProductServiceImpl implements IProductService {
                 .basePrice(request.getBasePrice())
                 .isActive(true)
                 .createdAt(new Timestamp(System.currentTimeMillis()))
-                .vectorEmbedding(vectorString)
                 .build();
 
         List<ProductVariant> variants = new ArrayList<>();
@@ -92,11 +85,15 @@ public class ProductServiceImpl implements IProductService {
             for (ProductCreateRequest.VariantDTO dto : request.getVariants()) {
                 variants.add(ProductVariant.builder()
                         .product(product).sku(dto.getSku()).color(dto.getColor())
-                        .size(dto.getSize()).priceOverride(dto.getPriceOverride())
+                        .size(dto.getSize()).material(dto.getMaterial())
+                        .priceOverride(dto.getPriceOverride())
                         .stockQuantity(dto.getStockQuantity()).build());
             }
         }
         product.setProductVariants(variants);
+        
+        // Generate and set the vector after variants are associated
+        updateVectorForProduct(product);
 
         return productRepository.save(product);
     }
@@ -110,13 +107,11 @@ public class ProductServiceImpl implements IProductService {
         product.setBrandName(request.getBrandName());
         product.setBasePrice(request.getBasePrice());
 
-        String embeddingText = request.getName() + " " + request.getDescription();
-        Embedding embedding = embeddingModel.embed(embeddingText).content();
-        float[] vector = embedding.vector();
-        String vectorString = IntStream.range(0, vector.length)
-                                     .mapToObj(i -> String.valueOf(vector[i]))
-                                     .collect(Collectors.joining(",", "[", "]"));
-        product.setVectorEmbedding(vectorString);
+        // NOTE: This simple update does not handle variant updates.
+        // A more complex logic would be needed to add/remove/update variants.
+        
+        // Re-generate embedding on update
+        updateVectorForProduct(product);
 
         return productRepository.save(product);
     }
@@ -128,5 +123,31 @@ public class ProductServiceImpl implements IProductService {
         product.setIsActive(false);
         productRepository.save(product);
         log.info("Deactivated product with ID {}", id);
+    }
+
+    private void updateVectorForProduct(Product product) {
+        StringBuilder embeddingBuilder = new StringBuilder();
+        embeddingBuilder.append(product.getName()).append(". ");
+        embeddingBuilder.append(product.getDescription()).append(". ");
+        embeddingBuilder.append("Hãng: ").append(product.getBrandName()).append(". ");
+
+        if (product.getProductVariants() != null && !product.getProductVariants().isEmpty()) {
+            Set<String> colors = product.getProductVariants().stream().map(ProductVariant::getColor).collect(Collectors.toSet());
+            Set<String> materials = product.getProductVariants().stream().map(ProductVariant::getMaterial).collect(Collectors.toSet());
+
+            if (!colors.isEmpty()) {
+                embeddingBuilder.append("Các màu hiện có: ").append(String.join(", ", colors)).append(". ");
+            }
+            if (!materials.isEmpty()) {
+                embeddingBuilder.append("Chất liệu: ").append(String.join(", ", materials)).append(". ");
+            }
+        }
+
+        Embedding embedding = embeddingModel.embed(embeddingBuilder.toString()).content();
+        float[] vector = embedding.vector();
+        String vectorString = IntStream.range(0, vector.length)
+                                     .mapToObj(i -> String.valueOf(vector[i]))
+                                     .collect(Collectors.joining(",", "[", "]"));
+        product.setVectorEmbedding(vectorString);
     }
 }

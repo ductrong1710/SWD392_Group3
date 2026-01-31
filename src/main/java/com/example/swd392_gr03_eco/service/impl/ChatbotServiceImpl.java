@@ -5,6 +5,7 @@ import com.example.swd392_gr03_eco.model.dto.ai.AiResponse;
 import com.example.swd392_gr03_eco.model.dto.request.ChatRequest;
 import com.example.swd392_gr03_eco.model.dto.response.ChatResponse;
 import com.example.swd392_gr03_eco.model.entities.Product;
+import com.example.swd392_gr03_eco.model.entities.ProductVariant;
 import com.example.swd392_gr03_eco.model.entities.User;
 import com.example.swd392_gr03_eco.repositories.ProductRepository;
 import com.example.swd392_gr03_eco.service.interfaces.IChatbotService;
@@ -16,8 +17,10 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -41,6 +44,7 @@ public class ChatbotServiceImpl implements IChatbotService {
     private String model;
 
     @Override
+    @Transactional(readOnly = true) // Add Transactional to allow lazy loading of variants
     public ChatResponse getStatelessReply(User user, ChatRequest request) {
         try {
             String userMessage = request.getMessage();
@@ -63,21 +67,42 @@ public class ChatbotServiceImpl implements IChatbotService {
     }
 
     private String callAi(User user, List<ChatRequest.Message> history, List<Product> products, String userMessage) {
-        String productContext = products.isEmpty()
-                ? "Không tìm thấy sản phẩm nào phù hợp trong kho."
-                : products.stream()
-                .map(p -> String.format("- Tên: %s | Giá: %s | Mô tả: %s",
-                        p.getName(), p.getBasePrice(), p.getDescription()))
-                .collect(Collectors.joining("\n"));
+        // --- NEW: Build a much more detailed context string ---
+        String productContext;
+        if (products.isEmpty()) {
+            productContext = "Không tìm thấy sản phẩm nào phù hợp trong kho.";
+        } else {
+            StringBuilder contextBuilder = new StringBuilder();
+            for (Product p : products) {
+                contextBuilder.append(String.format("- Tên sản phẩm: %s | Hãng: %s | Giá gốc: %s\n",
+                        p.getName(), p.getBrandName(), p.getBasePrice()));
+
+                if (p.getProductVariants() == null || p.getProductVariants().isEmpty()) {
+                    contextBuilder.append("  + Sản phẩm này chưa có biến thể (màu sắc, kích cỡ).\n");
+                } else {
+                    contextBuilder.append("  + Các loại hiện có:\n");
+                    for (ProductVariant v : p.getProductVariants()) {
+                        BigDecimal finalPrice = v.getPriceOverride() != null ? v.getPriceOverride() : p.getBasePrice();
+                        contextBuilder.append(String.format("    - Màu: %s, Cỡ: %s, Chất liệu: %s, Giá: %s, Tồn kho: %d\n",
+                                v.getColor(), v.getSize(), v.getMaterial(), finalPrice, v.getStockQuantity()));
+                    }
+                }
+            }
+            productContext = contextBuilder.toString();
+        }
 
         String systemPrompt = """
-                Bạn là nhân viên tư vấn bán hàng nhiệt tình và chuyên nghiệp.
-                Dưới đây là danh sách sản phẩm liên quan tìm được từ kho:
+                Bạn là một trợ lý bán hàng thông minh và thân thiện của một cửa hàng thời trang.
+                Dưới đây là thông tin chi tiết về các sản phẩm liên quan đến câu hỏi của khách hàng:
+                ---
                 %s
-                
-                Hãy dùng thông tin trên để trả lời câu hỏi của khách hàng.
-                Nếu không có sản phẩm nào phù hợp, hãy gợi ý khách hàng hỏi về chủ đề khác.
-                Chỉ trả lời dựa trên thông tin được cung cấp.
+                ---
+                Nhiệm vụ của bạn:
+                1. Dựa vào thông tin trên để trả lời câu hỏi của khách hàng một cách chính xác.
+                2. Trả lời các câu hỏi về màu sắc, kích cỡ, giá tiền, số lượng tồn kho.
+                3. Nếu khách hàng hỏi một thông tin không có (ví dụ: màu không có trong danh sách), hãy trả lời là "hiện tại shop chưa có màu đó" và gợi ý các màu đang có.
+                4. Nếu tồn kho (stock) bằng 0, hãy thông báo là "sản phẩm này đang tạm hết hàng".
+                5. Luôn trả lời một cách tự nhiên, lịch sự và ngắn gọn.
                 """.formatted(productContext);
 
         List<AiRequest.Message> messages = new ArrayList<>();
