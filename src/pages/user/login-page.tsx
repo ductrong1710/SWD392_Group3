@@ -1,24 +1,54 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { useState } from "react"
-import { Mail, Lock } from "lucide-react"
+import type React from "react";
+import { useState } from "react";
+import { Mail, Lock, Loader2 } from "lucide-react";
+import { authApi, setToken } from "../../services/api";
 
 interface LoginPageProps {
-  onLogin: (email: string, role: "user" | "admin") => void
+  onLogin: (email: string, role: "user" | "admin") => void;
+  onSwitchToRegister: () => void;  // ← Đổi từ optional sang required
 }
 
-export default function LoginPage({ onLogin }: LoginPageProps) {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [selectedRole, setSelectedRole] = useState<"user" | "admin">("user")
+export default function LoginPage({ onLogin, onSwitchToRegister }: LoginPageProps) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (email && password) {
-      onLogin(email, selectedRole)
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) return;
+
+    setError("");
+    setIsLoading(true);
+
+    try {
+      const response = await authApi.login({ email, password });
+      setToken(response.token);
+
+      // Decode JWT to get role
+      const payload = JSON.parse(atob(response.token.split(".")[1]));
+      const role = payload.role?.toLowerCase() === "admin" ? "admin" : "user";
+
+      onLogin(email, role);
+    } catch (err) {
+      setError("Invalid email or password. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
-  }
+  };
+
+  // Demo login (for development)
+  const handleDemoLogin = (demoRole: "user" | "admin") => {
+    if (demoRole === "admin") {
+      setEmail("admin@example.com");
+      setPassword("admin123");
+    } else {
+      setEmail("demo@example.com");
+      setPassword("demo123");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background text-foreground flex items-center justify-center px-4">
@@ -29,34 +59,11 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6">
-          {/* Role Selection */}
-          <div>
-            <label className="block text-sm font-medium mb-3">Login As</label>
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => setSelectedRole("user")}
-                className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
-                  selectedRole === "user"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-secondary text-foreground hover:bg-secondary/80"
-                }`}
-              >
-                Customer
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedRole("admin")}
-                className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
-                  selectedRole === "admin"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-secondary text-foreground hover:bg-secondary/80"
-                }`}
-              >
-                Admin
-              </button>
+          {error && (
+            <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
+              {error}
             </div>
-          </div>
+          )}
 
           {/* Email Field */}
           <div>
@@ -93,30 +100,45 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           {/* Submit Button */}
           <button
             type="submit"
-            className="w-full py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors"
+            disabled={isLoading}
+            className="w-full py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            Sign In
+            {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+            {isLoading ? "Signing In..." : "Sign In"}
           </button>
         </form>
 
         {/* Demo Credentials */}
-        <div className="mt-8 p-4 bg-secondary rounded-lg space-y-2">
-          <p className="text-sm font-medium">Demo Credentials:</p>
-          <div className="space-y-1 text-sm text-muted-foreground">
-            <p>
-              <span className="font-mono">Customer:</span> demo@example.com / demo123
-            </p>
-            <p>
-              <span className="font-mono">Admin:</span> admin@example.com / admin123
-            </p>
+        <div className="mt-8 p-4 bg-secondary rounded-lg space-y-3">
+          <p className="text-sm font-medium">Quick Demo Login:</p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => handleDemoLogin("user")}
+              className="flex-1 py-2 px-3 text-sm border border-border rounded-lg hover:bg-background transition-colors"
+            >
+              Fill Customer
+            </button>
+            <button
+              onClick={() => handleDemoLogin("admin")}
+              className="flex-1 py-2 px-3 text-sm border border-border rounded-lg hover:bg-background transition-colors"
+            >
+              Fill Admin
+            </button>
           </div>
         </div>
 
         {/* Sign Up Link */}
         <p className="text-center text-sm text-muted-foreground mt-6">
-          Don't have an account? <button className="text-primary hover:underline font-medium">Sign up</button>
+          Don't have an account?{" "}
+          <button
+            type="button"
+            onClick={onSwitchToRegister}
+            className="text-primary hover:underline font-medium"
+          >
+            Sign up
+          </button>
         </p>
       </div>
     </div>
-  )
+  );
 }

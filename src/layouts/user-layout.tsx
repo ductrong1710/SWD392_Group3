@@ -14,6 +14,8 @@ import UserProducts from "../pages/user/user-products";
 import UserCart from "../pages/user/user-cart";
 import UserOrders from "../pages/user/user-orders";
 import UserCheckout from "../pages/user/user-checkout";
+import UserProfilePage from "../pages/user/user-profile";
+import UserProductDetail from "../pages/user/user-product-detail";
 import ChatbotWidget from "../component/common/chatbot-widget";
 import Footer from "../component/common/footer";
 
@@ -80,6 +82,15 @@ export default function UserLayout({
             setSelectedProductId={setSelectedProductId}
           />
         )}
+        {currentPage === "product-detail" && selectedProductId && (
+          <UserProductDetail
+            productId={Number(selectedProductId)}
+            onBack={() => setCurrentPage("products")}
+            onAddToCart={() => {
+              // Refresh cart or show notification
+            }}
+          />
+        )}
         {currentPage === "cart" && (
           <UserCart
             cart={cart}
@@ -97,6 +108,9 @@ export default function UserLayout({
         )}
         {currentPage === "orders" && (
           <UserOrders orders={orders} setSelectedOrderId={setSelectedOrderId} />
+        )}
+        {currentPage === "profile" && (
+          <UserProfilePage onBack={() => setCurrentPage("home")} />
         )}
       </main>
       <Footer />

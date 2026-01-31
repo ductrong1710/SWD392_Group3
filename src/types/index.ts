@@ -12,7 +12,9 @@ export type PageType =
   | "checkout"
   | "orders"
   | "order-detail"
+  | "profile"
   | "login"
+  | "register"
   | "admin-dashboard"
   | "admin-products"
   | "admin-orders"
@@ -20,6 +22,7 @@ export type PageType =
   | "admin-users"
   | "admin-analytics";
 
+// Frontend display types (có thể khác với API response)
 export interface Product {
   id: string;
   name: string;
@@ -43,6 +46,8 @@ export interface CartItem {
   size: string;
   color: string;
   quantity: number;
+  orderItemId?: number; // For API integration
+  productVariantId?: number;
 }
 
 export interface Order {
@@ -71,5 +76,18 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  phone?: string;
   blocked: boolean;
 }
+
+// API Response types (re-export from services/api.ts)
+export type {
+  ProductResponse,
+  ProductVariant,
+  CartResponse,
+  CartItemResponse,
+  OrderResponse,
+  OrderItemResponse,
+  UserProfile,
+  DashboardStats,
+} from "../services/api";
