@@ -1,7 +1,7 @@
 "use client";
 
 import { Dispatch, SetStateAction } from "react";
-import type { PageType } from "../types/types";
+import type { PageType } from "../../types";
 
 interface GuestHomeProps {
   setCurrentPage: Dispatch<SetStateAction<PageType>>;

@@ -9,7 +9,7 @@ import {
   Menu,
   X,
 } from "lucide-react";
-import type { PageType, UserRole } from "../types/types";
+import type { PageType, UserRole } from "../../types";
 
 interface UserHeaderProps {
   currentPage: PageType;

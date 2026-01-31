@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowRight } from "lucide-react";
-import type { PageType } from "../types/types";
+import type { PageType } from "../../types";
 import { Dispatch, SetStateAction } from "react";
 
 interface UserHomeProps {

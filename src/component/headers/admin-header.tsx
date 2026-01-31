@@ -1,8 +1,8 @@
 "use client";
 import { Menu, LogOut, Bell } from "lucide-react";
-import RoleSwitcher from "../component/role-switcher";
+import RoleSwitcher from "../common/role-switcher"; 
 import type { Dispatch, SetStateAction } from "react";
-import type { UserRole } from "../types/types";
+import type { UserRole } from "../../types";
 
 interface AdminHeaderProps {
   setRole: Dispatch<SetStateAction<UserRole>>;

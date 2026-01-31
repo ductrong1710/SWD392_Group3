@@ -1,16 +1,17 @@
 "use client";
 
 import { useEffect, useState, Dispatch, SetStateAction } from "react";
-import type { PageType, UserRole } from "../../types/types";
-import AdminTaskbar from "../../admin/admin-taskbar";
-import AdminHeader from "../../header/admin-header";
-import AdminDashboard from "../../admin/admin-dashboard";
-import AdminProducts from "../../admin/admin-products";
-import AdminOrders from "../../admin/admin-orders";
-import AdminReviews from "../../admin/admin-reviews";
-import AdminUsers from "../../admin/admin-users";
-import AdminAnalytics from "../../admin/admin-analytics";
-import ChatbotWidget from "../../chatbot/chatbot-widget";
+import type { PageType, UserRole } from "../types";
+import AdminTaskbar from "../pages/admin/admin-taskbar";       
+import AdminHeader from "../component/headers/admin-header";
+import AdminDashboard from "../pages/admin/admin-dashboard";   
+import AdminProducts from "../pages/admin/admin-products";     
+import AdminOrders from "../pages/admin/admin-orders";         
+import AdminReviews from "../pages/admin/admin-reviews";       
+import AdminUsers from "../pages/admin/admin-users";           
+import AdminAnalytics from "../pages/admin/admin-analytics";   
+import ChatbotWidget from "../component/common/chatbot-widget";
+
 
 interface Product {
   id: string;

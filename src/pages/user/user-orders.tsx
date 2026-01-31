@@ -1,7 +1,7 @@
 "use client";
 
 import { Package, Truck, CheckCircle } from "lucide-react";
-import type { CartItem, Order } from "../types/types";
+import type { CartItem, Order } from "../../types";
 
 interface UserOrdersProps {
   orders: Order[];

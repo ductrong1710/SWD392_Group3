@@ -2,31 +2,8 @@
 
 import { useState } from "react"
 import { Heart, Eye, Plus, Minus } from "lucide-react"
-
-interface Product {
-  id: string
-  name: string
-  category: string
-  price: number
-  rating: number
-  reviews: number
-  image: string
-  images: string[]
-  sizes: string[]
-  colors: string[]
-  stock: Record<string, Record<string, number>>
-  description: string
-}
-
-interface CartItem {
-  id: string
-  name: string
-  price: number
-  image: string
-  size: string
-  color: string
-  quantity: number
-}
+import { COLOR_MAP } from "../../constants/colors"                    // ← thêm import
+import type { Product, CartItem } from "../../types"                  // ← thêm import
 
 interface UserProductsProps {
   products: Product[]
@@ -36,29 +13,6 @@ interface UserProductsProps {
   setSelectedCategory: (category: string | null) => void
   selectedProductId: string | null
   setSelectedProductId: (id: string | null) => void
-}
-
-const COLOR_MAP: Record<string, string> = {
-  White: "#f5f5f5",
-  Black: "#1a1a1a",
-  Blue: "#3b82f6",
-  Navy: "#001f3f",
-  "Dark Blue": "#1e40af",
-  "Light Blue": "#93c5fd",
-  Burgundy: "#800020",
-  Gray: "#9ca3af",
-  Beige: "#f5e6d3",
-  Rose: "#f1c0d0",
-  Camel: "#c19a6b",
-  Tan: "#d2b48c",
-  Brown: "#8b6f47",
-  Gold: "#ffd700",
-  Silver: "#c0c0c0",
-  "Rose Gold": "#f4c2a0",
-  Cream: "#fffdd0",
-  Coral: "#ff7f50",
-  Cognac: "#a94c1b",
-  "Navy Blue": "#001f3f",
 }
 
 export default function UserProducts({

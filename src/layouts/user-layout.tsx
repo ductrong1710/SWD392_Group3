@@ -7,15 +7,15 @@ import type {
   Product,
   PageType,
   UserRole,
-} from "../../types/types";
-import UserHeader from "../../header/user-header";
-import UserHome from "../../user/user-home";
-import UserProducts from "../../user/user-products";
-import UserCart from "../../user/user-cart";
-import UserOrders from "../../user/user-orders";
-import UserCheckout from "../../user/user-checkout";
-import ChatbotWidget from "../../chatbot/chatbot-widget";
-import Footer from "../../component/footer";
+} from "../types";
+import UserHeader from "../component/headers/user-header";
+import UserHome from "../pages/user/user-home";
+import UserProducts from "../pages/user/user-products";
+import UserCart from "../pages/user/user-cart";
+import UserOrders from "../pages/user/user-orders";
+import UserCheckout from "../pages/user/user-checkout";
+import ChatbotWidget from "../component/common/chatbot-widget";
+import Footer from "../component/common/footer";
 
 interface UserLayoutProps {
   currentPage: PageType;

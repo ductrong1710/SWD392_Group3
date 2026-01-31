@@ -2,7 +2,7 @@
 
 import { Trash2, Minus, Plus } from "lucide-react";
 import { Dispatch, SetStateAction } from "react";
-import type { CartItem, PageType } from "../types/types";
+import type { CartItem, PageType } from "../../types";
 
 interface UserCartProps {
   cart: CartItem[];

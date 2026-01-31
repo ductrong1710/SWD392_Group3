@@ -2,7 +2,8 @@
 
 import { useState, Dispatch, SetStateAction } from "react";
 import { ChevronDown } from "lucide-react";
-import type { UserRole } from "../types/types";
+import type { UserRole } from "../../types"; 
+
 
 interface RoleSwitcherProps {
   currentRole: UserRole;

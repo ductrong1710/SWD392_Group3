@@ -2,7 +2,7 @@
 
 import { useState, Dispatch, SetStateAction } from "react";
 import { ChevronRight } from "lucide-react";
-import type { CartItem, Order, PageType } from "../types/types";
+import type { CartItem, Order, PageType } from "../../types";
 
 interface UserCheckoutProps {
   cart: CartItem[];

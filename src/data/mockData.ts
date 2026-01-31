@@ -1,78 +1,6 @@
+import type { Product, Review, User, Order } from "../types";
 
-export type UserRole = "guest" | "user" | "admin"
-
-export interface Product {
-  id: string
-  name: string
-  category: string
-  price: number
-  rating: number
-  reviews: number
-  image: string
-  images: string[]
-  sizes: string[]
-  colors: string[]
-  stock: Record<string, Record<string, number>>
-  description: string
-}
-
-export interface CartItem {
-  id: string
-  name: string
-  price: number
-  image: string
-  size: string
-  color: string
-  quantity: number
-}
-
-export interface Order {
-  id: string
-  date: string
-  items: CartItem[]
-  total: number
-  status: "pending" | "shipping" | "completed" | "cancelled"
-  shippingAddress: string
-  paymentMethod: string
-  userId: string
-}
-
-export interface Review {
-  id: string
-  userId: string
-  productId: string
-  rating: number
-  title: string
-  comment: string
-  date: string
-  flagged: boolean
-}
-
-export interface User {
-  id: string
-  email: string
-  name: string
-  blocked: boolean
-}
-
-export type PageType =
-  | "home"
-  | "products"
-  | "product-detail"
-  | "cart"
-  | "checkout"
-  | "orders"
-  | "order-detail"
-  | "login"
-  | "admin-dashboard"
-  | "admin-products"
-  | "admin-orders"
-  | "admin-reviews"
-  | "admin-users"
-  | "admin-analytics"
-
-// Mock product data
-const MOCK_PRODUCTS: Product[] = [
+export const MOCK_PRODUCTS: Product[] = [
   {
     id: "1",
     name: "Premium Oxford Shirt",
@@ -172,11 +100,7 @@ const MOCK_PRODUCTS: Product[] = [
     rating: 4.5,
     reviews: 203,
     image: "/placeholder.svg?height=300&width=300",
-    images: [
-      "/placeholder.svg?height=500&width=500",
-      "/placeholder.svg?height=500&width=500",
-      "/placeholder.svg?height=500&width=500",
-    ],
+    images: ["/placeholder.svg?height=500&width=500", "/placeholder.svg?height=500&width=500", "/placeholder.svg?height=500&width=500"],
     sizes: ["6", "7", "8", "9", "10", "11", "12", "13"],
     colors: ["White", "Black", "Red", "Blue"],
     stock: {
@@ -187,10 +111,9 @@ const MOCK_PRODUCTS: Product[] = [
     },
     description: "Comfortable running shoes with advanced cushioning technology. Lightweight and breathable.",
   },
-]
+];
 
-// Mock reviews data
-const MOCK_REVIEWS: Review[] = [
+export const MOCK_REVIEWS: Review[] = [
   {
     id: "1",
     userId: "2",
@@ -221,18 +144,16 @@ const MOCK_REVIEWS: Review[] = [
     date: "2025-01-05",
     flagged: false,
   },
-]
+];
 
-// Mock users data
-const MOCK_USERS: User[] = [
+export const MOCK_USERS: User[] = [
   { id: "1", email: "admin@example.com", name: "Admin User", blocked: false },
   { id: "2", email: "john@example.com", name: "John Doe", blocked: false },
   { id: "3", email: "jane@example.com", name: "Jane Smith", blocked: false },
   { id: "4", email: "bob@example.com", name: "Bob Johnson", blocked: false },
-]
+];
 
-// Mock orders data
-const MOCK_ORDERS: Order[] = [
+export const MOCK_ORDERS: Order[] = [
   {
     id: "ORD-001",
     date: "2025-01-10",
@@ -273,4 +194,4 @@ const MOCK_ORDERS: Order[] = [
     paymentMethod: "MoMo",
     userId: "3",
   },
-]
+];

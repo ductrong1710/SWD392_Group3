@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useEffect, Dispatch, SetStateAction } from "react";
-import GuestHeader from "../../header/guest-header";
-import type { PageType, UserRole } from "../../types/types";
-import GuestHome from "../../guest/guest-home";
-import GuestProducts from "../../guest/guest-products";
-import ChatbotWidget from "../../chatbot/chatbot-widget";
-import Footer from "../../component/footer";
-import LoginModal from "../../modals/login-modal";
+import GuestHeader from "../component/headers/guest-header";
+import type { PageType, UserRole } from "../types";
+import GuestHome from "../pages/guest/guest-home";
+import GuestProducts from "../pages/guest/guest-products";
+import ChatbotWidget from "../component/common/chatbot-widget";
+import Footer from "../component/common/footer";
+import LoginModal from "../component/common/login-modal";
 
 interface Product {
   id: string;

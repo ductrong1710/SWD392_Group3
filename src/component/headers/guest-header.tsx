@@ -2,7 +2,7 @@
 
 import { Search, Menu, X } from "lucide-react";
 import { useState, Dispatch, SetStateAction } from "react";
-import type { PageType, UserRole } from "../types/types";
+import type { PageType, UserRole } from "../../types";
 
 interface GuestHeaderProps {
   currentPage: PageType;
