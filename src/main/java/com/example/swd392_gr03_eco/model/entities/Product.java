@@ -5,7 +5,7 @@ import lombok.*;
 import org.hibernate.annotations.ColumnTransformer;
 
 import java.math.BigDecimal;
-import java.time.Instant; // Import Instant
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -49,7 +49,7 @@ public class Product {
     private String vectorEmbedding;
 
     @Column(name = "created_at")
-    private Instant createdAt; // Change to Instant
+    private Instant createdAt;
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
     @Builder.Default
