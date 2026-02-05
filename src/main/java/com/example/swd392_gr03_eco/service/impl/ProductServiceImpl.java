@@ -1,8 +1,10 @@
 package com.example.swd392_gr03_eco.service.impl;
 
 import com.example.swd392_gr03_eco.model.dto.request.ProductCreateRequest;
+import com.example.swd392_gr03_eco.model.dto.response.ProductSummaryDto;
 import com.example.swd392_gr03_eco.model.entities.Category;
 import com.example.swd392_gr03_eco.model.entities.Product;
+import com.example.swd392_gr03_eco.model.entities.ProductImage;
 import com.example.swd392_gr03_eco.model.entities.ProductVariant;
 import com.example.swd392_gr03_eco.repositories.CategoryRepository;
 import com.example.swd392_gr03_eco.repositories.ProductRepository;
@@ -20,7 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.Instant; // Import Instant
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -30,6 +32,7 @@ import java.util.stream.IntStream;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@Transactional(readOnly = true) // Make all read operations transactional by default
 public class ProductServiceImpl implements IProductService {
 
     private final ProductRepository productRepository;
@@ -38,12 +41,13 @@ public class ProductServiceImpl implements IProductService {
     private final EmbeddingModel embeddingModel;
 
     @Override
-    public Page<Product> getAllProducts(Pageable pageable) {
-        return productRepository.findAll(pageable);
+    public Page<ProductSummaryDto> getAllProducts(Pageable pageable) {
+        Page<Product> productPage = productRepository.findAll(pageable);
+        return productPage.map(this::convertToProductSummaryDto);
     }
 
     @Override
-    public Page<Product> searchProducts(String keyword, Integer categoryId, String brand, Double minPrice, Double maxPrice, Pageable pageable) {
+    public Page<ProductSummaryDto> searchProducts(String keyword, Integer categoryId, String brand, Double minPrice, Double maxPrice, Pageable pageable) {
         Specification<Product> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
             predicates.add(cb.isTrue(root.get("isActive")));
@@ -54,11 +58,13 @@ public class ProductServiceImpl implements IProductService {
             if (maxPrice != null) predicates.add(cb.lessThanOrEqualTo(root.get("basePrice"), BigDecimal.valueOf(maxPrice)));
             return cb.and(predicates.toArray(new Predicate[0]));
         };
-        return productRepository.findAll(spec, pageable);
+        Page<Product> productPage = productRepository.findAll(spec, pageable);
+        return productPage.map(this::convertToProductSummaryDto);
     }
 
     @Override
     public Product getProductById(Integer id) {
+        // This method still returns the full Product entity for the detail page
         return productRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Product not found ID: " + id));
     }
@@ -77,7 +83,7 @@ public class ProductServiceImpl implements IProductService {
                 .brandName(request.getBrandName())
                 .basePrice(request.getBasePrice())
                 .isActive(true)
-                .createdAt(Instant.now()) // Use Instant.now()
+                .createdAt(Instant.now())
                 .build();
 
         List<ProductVariant> variants = new ArrayList<>();
@@ -120,6 +126,22 @@ public class ProductServiceImpl implements IProductService {
         log.info("Deactivated product with ID {}", id);
     }
 
+    private ProductSummaryDto convertToProductSummaryDto(Product product) {
+        String thumbnailUrl = product.getProductImages().stream()
+                .filter(img -> img.getIsThumbnail() != null && img.getIsThumbnail())
+                .map(ProductImage::getImageUrl)
+                .findFirst()
+                .orElse(product.getProductImages().isEmpty() ? null : product.getProductImages().get(0).getImageUrl());
+
+        return ProductSummaryDto.builder()
+                .id(product.getId())
+                .name(product.getName())
+                .price(product.getBasePrice())
+                .brandName(product.getBrandName())
+                .thumbnailUrl(thumbnailUrl)
+                .build();
+    }
+
     private void updateVectorForProduct(Product product) {
         StringBuilder embeddingBuilder = new StringBuilder();
         embeddingBuilder.append(product.getName()).append(". ");
@@ -130,12 +152,8 @@ public class ProductServiceImpl implements IProductService {
             Set<String> colors = product.getProductVariants().stream().map(ProductVariant::getColor).collect(Collectors.toSet());
             Set<String> materials = product.getProductVariants().stream().map(ProductVariant::getMaterial).collect(Collectors.toSet());
 
-            if (!colors.isEmpty()) {
-                embeddingBuilder.append("Các màu hiện có: ").append(String.join(", ", colors)).append(". ");
-            }
-            if (!materials.isEmpty()) {
-                embeddingBuilder.append("Chất liệu: ").append(String.join(", ", materials)).append(". ");
-            }
+            if (!colors.isEmpty()) embeddingBuilder.append("Các màu hiện có: ").append(String.join(", ", colors)).append(". ");
+            if (!materials.isEmpty()) embeddingBuilder.append("Chất liệu: ").append(String.join(", ", materials)).append(". ");
         }
 
         Embedding embedding = embeddingModel.embed(embeddingBuilder.toString()).content();

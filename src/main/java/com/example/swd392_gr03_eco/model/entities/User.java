@@ -6,7 +6,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import java.time.Instant; // Import Instant
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -38,8 +38,11 @@ public class User implements UserDetails {
     @Column(name = "phone")
     private String phone;
 
+    @Column(name = "address", columnDefinition = "TEXT") // Add address field
+    private String address;
+
     @Column(name = "created_at")
-    private Instant createdAt; // Change to Instant
+    private Instant createdAt;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "role_id", nullable = false)
