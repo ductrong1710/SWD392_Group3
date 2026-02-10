@@ -1,11 +1,8 @@
 package com.example.swd392_gr03_eco.service.impl;
 
 import com.example.swd392_gr03_eco.model.dto.request.ProductCreateRequest;
-import com.example.swd392_gr03_eco.model.dto.response.ProductSummaryDto;
-import com.example.swd392_gr03_eco.model.entities.Category;
-import com.example.swd392_gr03_eco.model.entities.Product;
-import com.example.swd392_gr03_eco.model.entities.ProductImage;
-import com.example.swd392_gr03_eco.model.entities.ProductVariant;
+import com.example.swd392_gr03_eco.model.dto.response.*;
+import com.example.swd392_gr03_eco.model.entities.*;
 import com.example.swd392_gr03_eco.repositories.CategoryRepository;
 import com.example.swd392_gr03_eco.repositories.ProductRepository;
 import com.example.swd392_gr03_eco.service.interfaces.IAiService;
@@ -32,7 +29,7 @@ import java.util.stream.IntStream;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@Transactional(readOnly = true) // Make all read operations transactional by default
+@Transactional(readOnly = true)
 public class ProductServiceImpl implements IProductService {
 
     private final ProductRepository productRepository;
@@ -63,15 +60,23 @@ public class ProductServiceImpl implements IProductService {
     }
 
     @Override
-    public Product getProductById(Integer id) {
-        // This method still returns the full Product entity for the detail page
-        return productRepository.findById(id)
+    public List<ProductDetailDto> getAllProductsAdmin() {
+        return productRepository.findAll().stream()
+                .map(this::convertToProductDetailDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public ProductDetailDto getProductById(Integer id) {
+        Product product = productRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Product not found ID: " + id));
+        return convertToProductDetailDto(product);
     }
 
     @Override
     @Transactional
     public Product createProduct(ProductCreateRequest request) {
+        // This method remains for internal logic, returning the entity
         String categoryName = aiService.classifyProduct(request.getName(), request.getDescription());
         Category category = categoryRepository.findByName(categoryName)
                 .orElseGet(() -> categoryRepository.findByName("Uncategorized").orElse(null));
@@ -106,7 +111,7 @@ public class ProductServiceImpl implements IProductService {
     @Override
     @Transactional
     public Product updateProduct(Integer id, ProductCreateRequest request) {
-        Product product = getProductById(id);
+        Product product = productRepository.findById(id).orElseThrow(() -> new RuntimeException("Product not found"));
         product.setName(request.getName());
         product.setDescription(request.getDescription());
         product.setBrandName(request.getBrandName());
@@ -120,10 +125,50 @@ public class ProductServiceImpl implements IProductService {
     @Override
     @Transactional
     public void deleteProduct(Integer id) {
-        Product product = getProductById(id);
+        Product product = productRepository.findById(id).orElseThrow(() -> new RuntimeException("Product not found"));
         product.setIsActive(false);
         productRepository.save(product);
         log.info("Deactivated product with ID {}", id);
+    }
+
+    // --- Mappers ---
+
+    private ProductDetailDto convertToProductDetailDto(Product product) {
+        ProductDetailDto dto = new ProductDetailDto();
+        dto.setId(product.getId());
+        dto.setName(product.getName());
+        dto.setDescription(product.getDescription());
+        dto.setBrandName(product.getBrandName());
+        dto.setBasePrice(product.getBasePrice());
+        dto.setIsActive(product.getIsActive());
+        dto.setCreatedAt(product.getCreatedAt());
+
+        CategoryDto categoryDto = new CategoryDto();
+        categoryDto.setId(product.getCategory().getId());
+        categoryDto.setName(product.getCategory().getName());
+        dto.setCategory(categoryDto);
+
+        dto.setProductImages(product.getProductImages().stream().map(image -> {
+            ProductImageDto imageDto = new ProductImageDto();
+            imageDto.setId(image.getId());
+            imageDto.setImageUrl(image.getImageUrl());
+            imageDto.setIsThumbnail(image.getIsThumbnail());
+            return imageDto;
+        }).collect(Collectors.toList()));
+
+        dto.setProductVariants(product.getProductVariants().stream().map(variant -> {
+            ProductVariantDto variantDto = new ProductVariantDto();
+            variantDto.setId(variant.getId());
+            variantDto.setSku(variant.getSku());
+            variantDto.setColor(variant.getColor());
+            variantDto.setSize(variant.getSize());
+            variantDto.setMaterial(variant.getMaterial());
+            variantDto.setPriceOverride(variant.getPriceOverride());
+            variantDto.setStockQuantity(variant.getStockQuantity());
+            return variantDto;
+        }).collect(Collectors.toList()));
+
+        return dto;
     }
 
     private ProductSummaryDto convertToProductSummaryDto(Product product) {
@@ -143,6 +188,7 @@ public class ProductServiceImpl implements IProductService {
     }
 
     private void updateVectorForProduct(Product product) {
+        // This logic remains the same
         StringBuilder embeddingBuilder = new StringBuilder();
         embeddingBuilder.append(product.getName()).append(". ");
         embeddingBuilder.append(product.getDescription()).append(". ");

@@ -1,5 +1,7 @@
 package com.example.swd392_gr03_eco.model.entities;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -26,16 +28,18 @@ public class Category {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_id")
+    @JsonBackReference("category-parent")
     private Category parent;
 
     @OneToMany(mappedBy = "parent")
     @Builder.Default
+    @JsonManagedReference("category-parent")
     private List<Category> children = new ArrayList<>();
 
     @Column(name = "ai_tag_metadata", columnDefinition = "TEXT")
     private String aiTagMetadata;
 
     @OneToMany(mappedBy = "category")
-    @Builder.Default
+    @JsonBackReference("product-category")
     private List<Product> products = new ArrayList<>();
 }

@@ -1,5 +1,7 @@
 package com.example.swd392_gr03_eco.model.entities;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -23,10 +25,12 @@ public class OrderItem {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id")
+    @JsonBackReference("order-items")
     private Order order;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_variant_id")
+    @JsonManagedReference("variant-orderitems")
     private ProductVariant productVariant;
 
     @Column(name = "quantity")

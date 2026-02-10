@@ -1,10 +1,11 @@
 package com.example.swd392_gr03_eco.model.entities;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
-import java.time.Instant; // Import Instant
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -49,10 +50,11 @@ public class Order {
     private String trackingCode;
 
     @Column(name = "created_at")
-    private Instant createdAt; // Change to Instant
+    private Instant createdAt;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
     @Builder.Default
+    @JsonManagedReference("order-items")
     private List<OrderItem> orderItems = new ArrayList<>();
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)

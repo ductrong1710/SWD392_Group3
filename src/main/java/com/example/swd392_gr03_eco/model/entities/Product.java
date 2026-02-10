@@ -1,5 +1,6 @@
 package com.example.swd392_gr03_eco.model.entities;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.ColumnTransformer;
@@ -32,6 +33,7 @@ public class Product {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id", nullable = false)
+    @JsonManagedReference("product-category")
     private Category category;
 
     @Column(name = "brand_name")
@@ -53,9 +55,11 @@ public class Product {
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
     @Builder.Default
+    @JsonManagedReference("product-variants")
     private List<ProductVariant> productVariants = new ArrayList<>();
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
     @Builder.Default
+    @JsonManagedReference("product-images")
     private List<ProductImage> productImages = new ArrayList<>();
 }
