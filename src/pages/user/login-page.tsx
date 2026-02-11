@@ -43,10 +43,10 @@ export default function LoginPage({ onLogin, onSwitchToRegister }: LoginPageProp
   const handleDemoLogin = (demoRole: "user" | "admin") => {
     if (demoRole === "admin") {
       setEmail("admin@example.com");
-      setPassword("admin123");
+      setPassword("123456");
     } else {
-      setEmail("demo@example.com");
-      setPassword("demo123");
+      setEmail("customer@example.com");
+      setPassword("123456");
     }
   };
 
