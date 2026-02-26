@@ -1,6 +1,8 @@
 package com.example.swd392_gr03_eco.service.interfaces;
 
 import com.example.swd392_gr03_eco.model.dto.request.ProductCreateRequest;
+import com.example.swd392_gr03_eco.model.dto.request.ProductUpdateRequest;
+import com.example.swd392_gr03_eco.model.dto.request.ProductUpdateStatusRequest;
 import com.example.swd392_gr03_eco.model.dto.response.ProductDetailDto;
 import com.example.swd392_gr03_eco.model.dto.response.ProductSummaryDto;
 import com.example.swd392_gr03_eco.model.entities.Product;
@@ -10,16 +12,17 @@ import org.springframework.data.domain.Pageable;
 import java.util.List;
 
 public interface IProductService {
-    // For public-facing API (paginated, summary)
+    // Public APIs
     Page<ProductSummaryDto> getAllProducts(Pageable pageable);
     Page<ProductSummaryDto> searchProducts(String keyword, Integer categoryId, String brand, Double minPrice, Double maxPrice, Pageable pageable);
-
-    // For admin-facing API (full details)
-    List<ProductDetailDto> getAllProductsAdmin();
     ProductDetailDto getProductById(Integer id);
 
-    // For product management
+    // Admin APIs
+    List<ProductDetailDto> getAllProductsAdmin();
     Product createProduct(ProductCreateRequest request);
-    Product updateProduct(Integer id, ProductCreateRequest request);
     void deleteProduct(Integer id);
+
+    // --- New Update APIs ---
+    ProductDetailDto updateProduct(Integer id, ProductUpdateRequest request);
+    ProductDetailDto updateProductStatus(Integer id, ProductUpdateStatusRequest request);
 }

@@ -1,13 +1,18 @@
 package com.example.swd392_gr03_eco.controllers;
 
+import com.example.swd392_gr03_eco.model.dto.request.ProductCreateRequest;
+import com.example.swd392_gr03_eco.model.dto.request.ProductUpdateRequest;
+import com.example.swd392_gr03_eco.model.dto.request.ProductUpdateStatusRequest;
 import com.example.swd392_gr03_eco.model.dto.response.ProductDetailDto;
 import com.example.swd392_gr03_eco.model.dto.response.ProductSummaryDto;
+import com.example.swd392_gr03_eco.model.entities.Product;
 import com.example.swd392_gr03_eco.service.interfaces.IProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -20,6 +25,8 @@ import java.util.List;
 public class ProductController {
 
     private final IProductService productService;
+
+    // --- Public APIs ---
 
     @GetMapping
     public ResponseEntity<Page<ProductSummaryDto>> getAllProducts(
@@ -63,8 +70,37 @@ public class ProductController {
         return ResponseEntity.ok(productService.getProductById(id));
     }
 
+    // --- Admin/Staff APIs ---
+
     @GetMapping("/all")
-    public ResponseEntity<List<ProductDetailDto>> getAllProducts() {
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'STAFF')")
+    public ResponseEntity<List<ProductDetailDto>> getAllProductsAdmin() {
         return ResponseEntity.ok(productService.getAllProductsAdmin());
+    }
+
+    @PostMapping
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'STAFF')")
+    public ResponseEntity<Product> createProduct(@RequestBody ProductCreateRequest request) {
+        Product createdProduct = productService.createProduct(request);
+        return new ResponseEntity<>(createdProduct, HttpStatus.CREATED);
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'STAFF')")
+    public ResponseEntity<ProductDetailDto> updateProduct(@PathVariable Integer id, @RequestBody ProductUpdateRequest request) {
+        return ResponseEntity.ok(productService.updateProduct(id, request));
+    }
+    
+    @PatchMapping("/{id}/status")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'STAFF')")
+    public ResponseEntity<ProductDetailDto> updateProductStatus(@PathVariable Integer id, @RequestBody ProductUpdateStatusRequest request) {
+        return ResponseEntity.ok(productService.updateProductStatus(id, request));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'STAFF')")
+    public ResponseEntity<Void> deleteProduct(@PathVariable Integer id) {
+        productService.deleteProduct(id);
+        return ResponseEntity.noContent().build();
     }
 }
