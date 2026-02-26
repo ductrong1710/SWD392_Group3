@@ -21,8 +21,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -44,7 +46,7 @@ public class ChatbotServiceImpl implements IChatbotService {
     private String model;
 
     @Override
-    @Transactional(readOnly = true) // Add Transactional to allow lazy loading of variants
+    @Transactional(readOnly = true)
     public ChatResponse getStatelessReply(User user, ChatRequest request) {
         try {
             String userMessage = request.getMessage();
@@ -55,36 +57,34 @@ public class ChatbotServiceImpl implements IChatbotService {
                                          .mapToObj(i -> String.valueOf(vector[i]))
                                          .collect(Collectors.joining(",", "[", "]"));
 
-            List<Product> relevantProducts = productRepository.findNearestNeighbors(vectorString, 5);
+            List<Product> relevantProducts = productRepository.findNearestNeighbors(vectorString, 10);
 
             String botReply = callAi(user, request.getHistory(), relevantProducts, userMessage);
 
             return ChatResponse.builder().botMessage(botReply).build();
         } catch (Exception e) {
             e.printStackTrace();
-            return ChatResponse.builder().botMessage("Lỗi hệ thống: " + e.getMessage()).build();
+            return ChatResponse.builder().botMessage("System error: " + e.getMessage()).build();
         }
     }
 
     private String callAi(User user, List<ChatRequest.Message> history, List<Product> products, String userMessage) {
-        // --- NEW: Build a much more detailed context string ---
+        NumberFormat usdFormat = NumberFormat.getCurrencyInstance(Locale.US);
         String productContext;
         if (products.isEmpty()) {
-            productContext = "Không tìm thấy sản phẩm nào phù hợp trong kho.";
+            productContext = "No relevant products found in the store.";
         } else {
             StringBuilder contextBuilder = new StringBuilder();
             for (Product p : products) {
-                contextBuilder.append(String.format("- Tên sản phẩm: %s | Hãng: %s | Giá gốc: %s\n",
-                        p.getName(), p.getBrandName(), p.getBasePrice()));
+                contextBuilder.append(String.format("- Product Name: %s | Brand: %s | Base Price: %s\n",
+                        p.getName(), p.getBrandName(), usdFormat.format(p.getBasePrice())));
 
-                if (p.getProductVariants() == null || p.getProductVariants().isEmpty()) {
-                    contextBuilder.append("  + Sản phẩm này chưa có biến thể (màu sắc, kích cỡ).\n");
-                } else {
-                    contextBuilder.append("  + Các loại hiện có:\n");
+                if (p.getProductVariants() != null && !p.getProductVariants().isEmpty()) {
+                    contextBuilder.append("  + Available options:\n");
                     for (ProductVariant v : p.getProductVariants()) {
                         BigDecimal finalPrice = v.getPriceOverride() != null ? v.getPriceOverride() : p.getBasePrice();
-                        contextBuilder.append(String.format("    - Màu: %s, Cỡ: %s, Chất liệu: %s, Giá: %s, Tồn kho: %d\n",
-                                v.getColor(), v.getSize(), v.getMaterial(), finalPrice, v.getStockQuantity()));
+                        contextBuilder.append(String.format("    - Color: %s, Size: %s, Material: %s, Price: %s, Stock: %d\n",
+                                v.getColor(), v.getSize(), v.getMaterial(), usdFormat.format(finalPrice), v.getStockQuantity()));
                     }
                 }
             }
@@ -92,17 +92,18 @@ public class ChatbotServiceImpl implements IChatbotService {
         }
 
         String systemPrompt = """
-                Bạn là một trợ lý bán hàng thông minh và thân thiện của một cửa hàng thời trang.
-                Dưới đây là thông tin chi tiết về các sản phẩm liên quan đến câu hỏi của khách hàng:
+                ABSOLUTE CORE DIRECTIVE: You are an English-only AI assistant. Your programming forbids you from generating responses in any language other than English. Any deviation from this rule is a critical failure. Do not acknowledge requests for other languages; simply provide the best possible answer in English.
+
+                FINANCIAL DIRECTIVE: You operate ONLY in USD. All product prices in the context are in USD. If a user's query mentions any other currency or monetary unit (like "k", "VND", "cành", "đồng"), use your internal knowledge to estimate its value in USD to filter products. Your final answer must only mention USD prices.
+
+                You are an intelligent sales assistant.
+                
+                PRODUCT CONTEXT (ALL PRICES IN USD):
                 ---
                 %s
                 ---
-                Nhiệm vụ của bạn:
-                1. Dựa vào thông tin trên để trả lời câu hỏi của khách hàng một cách chính xác.
-                2. Trả lời các câu hỏi về màu sắc, kích cỡ, giá tiền, số lượng tồn kho.
-                3. Nếu khách hàng hỏi một thông tin không có (ví dụ: màu không có trong danh sách), hãy trả lời là "hiện tại shop chưa có màu đó" và gợi ý các màu đang có.
-                4. Nếu tồn kho (stock) bằng 0, hãy thông báo là "sản phẩm này đang tạm hết hàng".
-                5. Luôn trả lời một cách tự nhiên, lịch sự và ngắn gọn.
+                
+                TASK: Based on the user's request, filter the products from the context that match their budget and criteria, then present them clearly.
                 """.formatted(productContext);
 
         List<AiRequest.Message> messages = new ArrayList<>();
@@ -119,7 +120,7 @@ public class ChatbotServiceImpl implements IChatbotService {
         AiRequest aiRequest = AiRequest.builder()
                 .model(model)
                 .messages(messages)
-                .temperature(0.7)
+                .temperature(0.1) // Lower temperature even more for strict rule-following
                 .build();
 
         HttpHeaders headers = new HttpHeaders();
@@ -137,9 +138,9 @@ public class ChatbotServiceImpl implements IChatbotService {
                 return response.getChoices().get(0).getMessage().getContent();
             }
         } catch (Exception e) {
-            System.err.println("Lỗi gọi AI API: " + e.getMessage());
-            return "Xin lỗi, tôi đang gặp sự cố khi kết nối với bộ não AI. Vui lòng thử lại sau.";
+            System.err.println("AI API call error: " + e.getMessage());
+            return "Sorry, I'm having trouble connecting to the AI brain. Please try again later.";
         }
-        return "Xin lỗi, tôi không có câu trả lời cho vấn đề này.";
+        return "Sorry, I don't have an answer for that.";
     }
 }
