@@ -1,6 +1,8 @@
 package com.example.swd392_gr03_eco.service.impl;
 
 import com.example.swd392_gr03_eco.model.dto.request.ProductCreateRequest;
+import com.example.swd392_gr03_eco.model.dto.request.ProductUpdateRequest;
+import com.example.swd392_gr03_eco.model.dto.request.ProductUpdateStatusRequest;
 import com.example.swd392_gr03_eco.model.dto.response.*;
 import com.example.swd392_gr03_eco.model.entities.*;
 import com.example.swd392_gr03_eco.repositories.CategoryRepository;
@@ -9,6 +11,7 @@ import com.example.swd392_gr03_eco.service.interfaces.IAiService;
 import com.example.swd392_gr03_eco.service.interfaces.IProductService;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.model.embedding.EmbeddingModel;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +40,7 @@ public class ProductServiceImpl implements IProductService {
     private final IAiService aiService;
     private final EmbeddingModel embeddingModel;
 
+    // --- Read Operations ---
     @Override
     public Page<ProductSummaryDto> getAllProducts(Pageable pageable) {
         Page<Product> productPage = productRepository.findAll(pageable);
@@ -69,14 +73,15 @@ public class ProductServiceImpl implements IProductService {
     @Override
     public ProductDetailDto getProductById(Integer id) {
         Product product = productRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Product not found ID: " + id));
+                .orElseThrow(() -> new EntityNotFoundException("Product not found with id: " + id));
         return convertToProductDetailDto(product);
     }
+
+    // --- Write Operations ---
 
     @Override
     @Transactional
     public Product createProduct(ProductCreateRequest request) {
-        // This method remains for internal logic, returning the entity
         String categoryName = aiService.classifyProduct(request.getName(), request.getDescription());
         Category category = categoryRepository.findByName(categoryName)
                 .orElseGet(() -> categoryRepository.findByName("Uncategorized").orElse(null));
@@ -110,29 +115,47 @@ public class ProductServiceImpl implements IProductService {
 
     @Override
     @Transactional
-    public Product updateProduct(Integer id, ProductCreateRequest request) {
-        Product product = productRepository.findById(id).orElseThrow(() -> new RuntimeException("Product not found"));
+    public ProductDetailDto updateProduct(Integer id, ProductUpdateRequest request) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Product not found with id: " + id));
+
         product.setName(request.getName());
         product.setDescription(request.getDescription());
         product.setBrandName(request.getBrandName());
         product.setBasePrice(request.getBasePrice());
-        
-        updateVectorForProduct(product);
+        product.setIsActive(request.getIsActive());
 
-        return productRepository.save(product);
+        if (request.getCategoryId() != null && !request.getCategoryId().equals(product.getCategory().getId())) {
+            Category newCategory = categoryRepository.findById(request.getCategoryId())
+                    .orElseThrow(() -> new EntityNotFoundException("Category not found with id: " + request.getCategoryId()));
+            product.setCategory(newCategory);
+        }
+
+        updateVectorForProduct(product);
+        Product updatedProduct = productRepository.save(product);
+        return convertToProductDetailDto(updatedProduct);
+    }
+
+    @Override
+    @Transactional
+    public ProductDetailDto updateProductStatus(Integer id, ProductUpdateStatusRequest request) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Product not found with id: " + id));
+        product.setIsActive(request.isActive());
+        Product updatedProduct = productRepository.save(product);
+        return convertToProductDetailDto(updatedProduct);
     }
 
     @Override
     @Transactional
     public void deleteProduct(Integer id) {
-        Product product = productRepository.findById(id).orElseThrow(() -> new RuntimeException("Product not found"));
+        Product product = productRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Product not found"));
         product.setIsActive(false);
         productRepository.save(product);
         log.info("Deactivated product with ID {}", id);
     }
 
     // --- Mappers ---
-
     private ProductDetailDto convertToProductDetailDto(Product product) {
         ProductDetailDto dto = new ProductDetailDto();
         dto.setId(product.getId());
@@ -144,8 +167,10 @@ public class ProductServiceImpl implements IProductService {
         dto.setCreatedAt(product.getCreatedAt());
 
         CategoryDto categoryDto = new CategoryDto();
-        categoryDto.setId(product.getCategory().getId());
-        categoryDto.setName(product.getCategory().getName());
+        if (product.getCategory() != null) {
+            categoryDto.setId(product.getCategory().getId());
+            categoryDto.setName(product.getCategory().getName());
+        }
         dto.setCategory(categoryDto);
 
         dto.setProductImages(product.getProductImages().stream().map(image -> {
@@ -188,7 +213,6 @@ public class ProductServiceImpl implements IProductService {
     }
 
     private void updateVectorForProduct(Product product) {
-        // This logic remains the same
         StringBuilder embeddingBuilder = new StringBuilder();
         embeddingBuilder.append(product.getName()).append(". ");
         embeddingBuilder.append(product.getDescription()).append(". ");
