@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { X, Heart, Minus, Plus, ShoppingCart } from "lucide-react";
 import { productsApi } from "../../services/product-api";
 import { cartApi } from "../../services/cart-api";
+import { useToast } from "../../contexts/ToastContext";
 import type { ProductDetail, ProductVariant } from "../../types";
 
 interface ProductDetailProps {
@@ -20,6 +21,7 @@ export default function UserProductDetail({ productId, onClose, onAddToCart }: P
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const toast = useToast();
 
   useEffect(() => {
     if (productId) {
@@ -50,7 +52,7 @@ export default function UserProductDetail({ productId, onClose, onAddToCart }: P
       setError("");
     } catch (err) {
       setError("Failed to load product");
-      console.error(err);
+      toast.error("Loading failed", "Could not load product details");
     } finally {
       setIsLoading(false);
     }
@@ -81,12 +83,12 @@ export default function UserProductDetail({ productId, onClose, onAddToCart }: P
   const handleAddToCart = async () => {
     const variant = getSelectedVariant();
     if (!variant) {
-      alert("Please select color and size");
+      toast.warning("Selection required", "Please select a color and size");
       return;
     }
 
     if (variant.stockQuantity < quantity) {
-      alert("Not enough stock");
+      toast.error("Insufficient stock", `Only ${variant.stockQuantity} item(s) available`);
       return;
     }
 
@@ -96,12 +98,11 @@ export default function UserProductDetail({ productId, onClose, onAddToCart }: P
         productVariantId: variant.id,
         quantity: quantity,
       });
-      alert(`Added ${quantity} item(s) to cart!`);
+      toast.success("Added to cart", `${quantity} item(s) added to your cart`);
       onAddToCart?.();
       onClose();
     } catch (err) {
-      alert("Failed to add to cart. Please try again.");
-      console.error(err);
+      toast.error("Failed to add", "Could not add item to cart. Please try again.");
     } finally {
       setIsAddingToCart(false);
     }

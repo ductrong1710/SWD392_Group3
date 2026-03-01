@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Eye, Search } from "lucide-react"
 import type { Order, OrderStatus } from "../../types"
 import { adminOrdersApi } from "../../services/order-api"
-
+import { useToast } from "../../contexts/ToastContext"
 interface AdminOrdersProps {
   orders: Order[];
   setOrders: (orders: Order[]) => void;
@@ -13,6 +13,7 @@ interface AdminOrdersProps {
 export default function AdminOrders({ orders, setOrders }: AdminOrdersProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [isLoading, setIsLoading] = useState(true)
+  const toast = useToast()
 
   useEffect(() => {
     loadOrders()
@@ -24,7 +25,7 @@ export default function AdminOrders({ orders, setOrders }: AdminOrdersProps) {
       const data = await adminOrdersApi.getAllOrders()
       setOrders(data)
     } catch (error) {
-      console.error("Failed to load orders:", error)
+      toast.error("Loading failed", "Could not load orders")
     } finally {
       setIsLoading(false)
     }
@@ -60,8 +61,9 @@ export default function AdminOrders({ orders, setOrders }: AdminOrdersProps) {
     try {
       await adminOrdersApi.updateStatus(orderId, newStatus)
       setOrders(orders.map((o) => (o.orderId === orderId ? { ...o, status: newStatus } : o)))
+      toast.success("Status updated", `Order #${orderId} status changed to ${newStatus}`)
     } catch (error) {
-      console.error("Failed to update order status:", error)
+      toast.error("Update failed", `Could not update order #${orderId} status`)
     }
   }
 

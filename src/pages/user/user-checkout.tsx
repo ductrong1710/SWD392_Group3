@@ -4,6 +4,7 @@ import { useState, Dispatch, SetStateAction } from "react";
 import { ChevronRight } from "lucide-react";
 import { checkoutApi } from "../../services/checkout-api";
 import { ordersApi } from "../../services/order-api";
+import { useToast } from "../../contexts/ToastContext";
 import type { CartItem, Order, PageType } from "../../types";
 
 interface UserCheckoutProps {
@@ -28,6 +29,7 @@ export default function UserCheckout({
     city: "",
     paymentMethod: "VNPAY" as "VNPAY" | "MOMO" | "COD",
   });
+  const toast = useToast();
 
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const shipping = 10;
@@ -36,12 +38,13 @@ export default function UserCheckout({
 
   const handleSubmit = async () => {
     if (!formData.fullName || !formData.phone || !formData.addressLine || !formData.city) {
-      alert("Please fill all fields");
+      toast.warning("Missing information", "Please fill in all required fields");
       return;
     }
 
     if (step === 1) {
       setStep(2);
+      toast.info("Step 2", "Please select your payment method");
       return;
     }
 
@@ -57,20 +60,19 @@ export default function UserCheckout({
         paymentMethod: formData.paymentMethod,
       });
 
-      // If payment URL exists, redirect to payment gateway
       if (response.paymentUrl) {
+        toast.info("Redirecting", "Redirecting to payment gateway...");
         window.location.href = response.paymentUrl;
         return;
       }
 
-      // COD - clear cart and go to orders
       setCart([]);
       const updatedOrders = await ordersApi.getMyOrders();
       setOrders(updatedOrders);
+      toast.success("Order placed!", "Your order has been placed successfully");
       setCurrentPage("orders");
     } catch (error) {
-      console.error("Checkout failed:", error);
-      alert("Checkout failed. Please try again.");
+      toast.error("Checkout failed", "Something went wrong. Please try again.");
     } finally {
       setIsSubmitting(false);
     }

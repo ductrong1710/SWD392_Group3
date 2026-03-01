@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
 import { ArrowRight } from "lucide-react";
+import { useToast } from "../../contexts/ToastContext";
 import type { PageType } from "../../types";
 import { Dispatch, SetStateAction } from "react";
 
@@ -13,6 +15,12 @@ export default function UserHome({
   setCurrentPage,
   setSelectedCategory,
 }: UserHomeProps) {
+  const toast = useToast();
+
+  useEffect(() => {
+    toast.info("Welcome!", "Browse our latest collections");
+  }, []);
+
   const handleCategoryClick = (category: string) => {
     setSelectedCategory(category);
     setCurrentPage("products");

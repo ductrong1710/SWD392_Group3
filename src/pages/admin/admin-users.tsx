@@ -1,8 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Search } from "lucide-react"
 import type { User } from "../../types"
+import { userApi } from "../../services/user-api"
+import { useToast } from "../../contexts/ToastContext"
 
 interface AdminUsersProps {
   users: User[];

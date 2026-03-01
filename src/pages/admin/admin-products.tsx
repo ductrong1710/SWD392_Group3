@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Edit2, Trash2, Plus, Search } from "lucide-react"
 import type { ProductSummary } from "../../types"
 import { productsApi } from "../../services/product-api"
+import { useToast } from "../../contexts/ToastContext"
 
 interface AdminProductsProps {
   products: ProductSummary[];
@@ -13,6 +14,7 @@ interface AdminProductsProps {
 export default function AdminProducts({ products, setProducts }: AdminProductsProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [isLoading, setIsLoading] = useState(true)
+  const toast = useToast()
 
   useEffect(() => {
     loadProducts()
@@ -24,7 +26,7 @@ export default function AdminProducts({ products, setProducts }: AdminProductsPr
       const response = await productsApi.getAll(0, 100)
       setProducts(response.content)
     } catch (error) {
-      console.error("Failed to load products:", error)
+      toast.error("Loading failed", "Could not load products")
     } finally {
       setIsLoading(false)
     }
@@ -38,8 +40,9 @@ export default function AdminProducts({ products, setProducts }: AdminProductsPr
     try {
       await productsApi.delete(id)
       setProducts(products.filter((p) => p.id !== id))
+      toast.success("Product deleted", "Product has been removed successfully")
     } catch (error) {
-      console.error("Failed to delete product:", error)
+      toast.error("Delete failed", "Could not delete product")
     }
   }
 

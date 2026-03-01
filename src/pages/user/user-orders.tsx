@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Package, Truck, CheckCircle, Clock, XCircle } from "lucide-react";
 import { ordersApi } from "../../services/order-api";
+import { useToast } from "../../contexts/ToastContext";
 import type { Order } from "../../types";
 
 interface UserOrdersProps {
@@ -16,6 +17,7 @@ export default function UserOrders({
 }: UserOrdersProps) {
   const [orders, setOrders] = useState<Order[]>(propOrders);
   const [isLoading, setIsLoading] = useState(true);
+  const toast = useToast();
 
   useEffect(() => {
     loadOrders();
@@ -27,7 +29,7 @@ export default function UserOrders({
       const data = await ordersApi.getMyOrders();
       setOrders(data);
     } catch (error) {
-      console.error("Failed to load orders:", error);
+      toast.error("Failed to load orders", "Please try again later");
     } finally {
       setIsLoading(false);
     }

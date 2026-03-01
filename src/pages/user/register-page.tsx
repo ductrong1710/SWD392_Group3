@@ -3,6 +3,7 @@
 import type React from "react";
 import { useState } from "react";
 import { Mail, Lock, User, Phone } from "lucide-react";
+import { useToast } from "../../contexts/ToastContext";
 
 interface RegisterPageProps {
   onRegister: (data: { fullName: string; email: string; password: string; phone: string }) => Promise<boolean>;
@@ -19,6 +20,7 @@ export default function RegisterPage({ onRegister, onSwitchToLogin }: RegisterPa
   });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const toast = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,11 +28,13 @@ export default function RegisterPage({ onRegister, onSwitchToLogin }: RegisterPa
 
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match");
+      toast.error("Password mismatch", "Passwords do not match");
       return;
     }
 
     if (formData.password.length < 6) {
       setError("Password must be at least 6 characters");
+      toast.warning("Weak password", "Password must be at least 6 characters");
       return;
     }
 
@@ -42,8 +46,11 @@ export default function RegisterPage({ onRegister, onSwitchToLogin }: RegisterPa
       phone: formData.phone,
     });
 
-    if (!success) {
+    if (success) {
+      toast.success("Account created!", "Please sign in with your new account");
+    } else {
       setError("Registration failed. Email might already be in use.");
+      toast.error("Registration failed", "Email might already be in use");
     }
     setIsLoading(false);
   };

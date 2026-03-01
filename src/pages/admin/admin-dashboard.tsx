@@ -5,6 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { TrendingUp, ShoppingBag, Users, DollarSign } from "lucide-react"
 import type { ProductSummary, Order, Review, User, DashboardStats } from "../../types"
 import { dashboardApi } from "../../services/dashboard-api"
+import { useToast } from "../../contexts/ToastContext"
 
 interface AdminDashboardProps {
   products: ProductSummary[];
@@ -16,6 +17,7 @@ interface AdminDashboardProps {
 export default function AdminDashboard({ products, orders, reviews, users }: AdminDashboardProps) {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const toast = useToast()
 
   useEffect(() => {
     loadDashboardStats()
@@ -27,7 +29,7 @@ export default function AdminDashboard({ products, orders, reviews, users }: Adm
       const data = await dashboardApi.getStats()
       setStats(data)
     } catch (error) {
-      console.error("Failed to load dashboard stats:", error)
+      toast.error("Dashboard error", "Failed to load dashboard statistics")
     } finally {
       setIsLoading(false)
     }

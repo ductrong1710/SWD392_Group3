@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Trash2, Star } from "lucide-react"
 import type { Review } from "../../types"
+import { useToast } from "../../contexts/ToastContext"
 
 interface AdminReviewsProps {
   reviews: Review[];
@@ -11,6 +12,7 @@ interface AdminReviewsProps {
 
 export default function AdminReviews({ reviews, setReviews }: AdminReviewsProps) {
   const [filter, setFilter] = useState<"all" | "high" | "low">("all")
+  const toast = useToast()
 
   const filteredReviews =
     filter === "all"
@@ -21,6 +23,7 @@ export default function AdminReviews({ reviews, setReviews }: AdminReviewsProps)
 
   const handleDelete = (reviewId: number) => {
     setReviews(reviews.filter((r) => r.reviewId !== reviewId))
+    toast.success("Review deleted", "Review has been removed successfully")
   }
 
   return (

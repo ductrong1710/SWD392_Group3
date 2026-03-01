@@ -3,6 +3,7 @@
 import { useState, useEffect, Dispatch, SetStateAction } from "react";
 import { Trash2, Minus, Plus } from "lucide-react";
 import { cartApi } from "../../services/cart-api";
+import { useToast } from "../../contexts/ToastContext";
 import type { CartItem, PageType } from "../../types";
 
 interface UserCartProps {
@@ -17,6 +18,7 @@ export default function UserCart({
   setCurrentPage,
 }: UserCartProps) {
   const [isLoading, setIsLoading] = useState(true);
+  const toast = useToast();
 
   useEffect(() => {
     loadCart();
@@ -28,7 +30,7 @@ export default function UserCart({
       const data = await cartApi.getCart();
       setCart(data.items);
     } catch (error) {
-      console.error("Failed to load cart:", error);
+      toast.error("Failed to load cart", "Please try again later");
     } finally {
       setIsLoading(false);
     }
@@ -40,8 +42,9 @@ export default function UserCart({
     try {
       await cartApi.removeItem(productVariantId);
       setCart(cart.filter((item) => item.productVariantId !== productVariantId));
+      toast.success("Item removed", "Item has been removed from your cart");
     } catch (error) {
-      console.error("Failed to remove item:", error);
+      toast.error("Remove failed", "Could not remove item from cart");
     }
   };
 
@@ -53,7 +56,7 @@ export default function UserCart({
         item.productVariantId === productVariantId ? { ...item, quantity } : item
       ));
     } catch (error) {
-      console.error("Failed to update quantity:", error);
+      toast.error("Update failed", "Could not update quantity");
     }
   };
 

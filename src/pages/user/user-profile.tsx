@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { User as UserIcon, Mail, Phone, MapPin, Edit2, Plus } from "lucide-react";
 import { userApi } from "../../services/user-api";
+import { useToast } from "../../contexts/ToastContext";
 import type { User, UserAddress } from "../../types";
 
 interface UserProfilePageProps {
@@ -14,6 +15,7 @@ export default function UserProfilePage({ onBack }: UserProfilePageProps) {
   const [addresses, setAddresses] = useState<UserAddress[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const toast = useToast();
 
   useEffect(() => {
     loadProfile();
@@ -25,6 +27,7 @@ export default function UserProfilePage({ onBack }: UserProfilePageProps) {
       setProfile(data);
     } catch (err) {
       setError("Failed to load profile");
+      toast.error("Profile error", "Could not load your profile");
     } finally {
       setIsLoading(false);
     }

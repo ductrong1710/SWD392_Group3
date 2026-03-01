@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Heart, Eye } from "lucide-react"
 import type { ProductSummary } from "../../types"
 import { fetchProducts } from "../../services/product-api"
+import { useToast } from "../../contexts/ToastContext"
 
 interface GuestProductsProps {
   products: ProductSummary[]
@@ -23,6 +24,7 @@ export default function GuestProducts({
   const [apiProducts, setApiProducts] = useState<ProductSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const toast = useToast()
 
   useEffect(() => {
     const loadProducts = async () => {
@@ -33,7 +35,7 @@ export default function GuestProducts({
         setError(null)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load products')
-        console.error('Error fetching products:', err)
+        toast.error("Loading failed", "Could not load products")
       } finally {
         setLoading(false)
       }
@@ -51,6 +53,11 @@ export default function GuestProducts({
     thumbnailUrl: apiProduct.thumbnailUrl,
   }))
 
+  const handleLoginRequired = () => {
+    toast.info("Login required", "Please sign in to add items to cart")
+    onCheckout()
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-12">
       <div className="mb-8">
@@ -62,13 +69,13 @@ export default function GuestProducts({
 
       {loading && (
         <div className="text-center py-12">
-          <p className="text-muted-foreground">Đang tải sản phẩm...</p>
+          <p className="text-muted-foreground">Loading Products...</p>
         </div>
       )}
 
       {error && (
         <div className="text-center py-12">
-          <p className="text-red-500">Lỗi: {error}</p>
+          <p className="text-red-500">Error: {error}</p>
         </div>
       )}
 
@@ -90,14 +97,14 @@ export default function GuestProducts({
                     />
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center gap-4 opacity-0 group-hover:opacity-100">
                       <button
-                        onClick={onCheckout}
+                        onClick={handleLoginRequired}
                         title="Login required"
                         className="p-2 bg-white rounded-full text-foreground hover:bg-secondary transition-colors"
                       >
                         <Eye className="w-5 h-5" />
                       </button>
                       <button
-                        onClick={onCheckout}
+                        onClick={handleLoginRequired}
                         title="Login required"
                         className="p-2 bg-white rounded-full text-foreground hover:bg-secondary transition-colors"
                       >
@@ -110,9 +117,9 @@ export default function GuestProducts({
                     <span className="text-sm text-muted-foreground">{product.brandName}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-lg font-semibold">{product.price.toLocaleString('vi-VN')}đ</span>
+                    <span className="text-lg font-semibold">{product.price.toLocaleString('vi-VN')}$</span>
                     <button
-                      onClick={onCheckout}
+                      onClick={handleLoginRequired}
                       className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors text-sm font-medium"
                     >
                       View

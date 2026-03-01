@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { Heart, Eye, Search } from "lucide-react"
 import { productsApi } from "../../services/product-api"
+import { useToast } from "../../contexts/ToastContext"
 import type { ProductSummary, CartItem, Category } from "../../types"
 import UserProductDetail from "./user-product-detail"
 import { fetchApi } from "../../services/base-api"
@@ -30,12 +31,11 @@ export default function UserProducts({
   const [error, setError] = useState<string | null>(null)
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null)
   const [categories, setCategories] = useState<Category[]>([])
-
-  // Search states
   const [searchField, setSearchField] = useState<'keyword' | 'brand' | 'minPrice' | 'maxPrice'>('keyword')
   const [searchValue, setSearchValue] = useState('')
   const [isSearchMode, setIsSearchMode] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const toast = useToast()
 
   useEffect(() => {
     loadProducts()
@@ -51,6 +51,7 @@ export default function UserProducts({
       setIsSearchMode(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load products')
+      toast.error("Loading failed", "Could not load products")
     } finally {
       setLoading(false)
     }
@@ -61,7 +62,8 @@ export default function UserProducts({
       const data = await fetchApi<Category[]>("/v1/categories")
       setCategories(data)
     } catch (err) {
-      console.error("Failed to load categories:", err)
+      toast.warning("Categories unavailable", "Could not load categories")
+      setCategories([])
     }
   }
 
@@ -90,8 +92,10 @@ export default function UserProducts({
       setSearchQuery(searchValue)
       setIsSearchMode(true)
       setError(null)
+      toast.info("Search complete", `Found ${response.content.length} product(s)`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to search products')
+      toast.error("Search failed", "Could not complete your search")
     } finally {
       setLoading(false)
     }
@@ -113,6 +117,7 @@ export default function UserProducts({
       setError(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to filter products')
+      toast.error("Filter failed", "Could not filter by category")
     } finally {
       setLoading(false)
     }
@@ -266,7 +271,7 @@ export default function UserProducts({
                     <span className="text-sm text-muted-foreground">{product.brandName}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-lg font-semibold">{product.price.toLocaleString('vi-VN')}đ</span>
+                    <span className="text-lg font-semibold">{product.price.toLocaleString('vi-VN')}$</span>
                     <button
                       onClick={() => handleProductClick(product.id)}
                       className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors text-sm font-medium"

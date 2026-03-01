@@ -2,23 +2,13 @@
 
 import { useEffect, useState } from "react"
 import {
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
+  BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from "recharts"
 import { TrendingUp } from "lucide-react"
 import type { ProductSummary, Order, DashboardStats } from "../../types"
 import { dashboardApi } from "../../services/dashboard-api"
+import { useToast } from "../../contexts/ToastContext"
 
 interface AdminAnalyticsProps {
   products: ProductSummary[];
@@ -30,6 +20,7 @@ const COLORS = ["#f59e0b", "#10b981", "#3b82f6", "#8b5cf6", "#ec4899"]
 export default function AdminAnalytics({ products, orders }: AdminAnalyticsProps) {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const toast = useToast()
 
   useEffect(() => {
     loadStats()
@@ -41,7 +32,7 @@ export default function AdminAnalytics({ products, orders }: AdminAnalyticsProps
       const data = await dashboardApi.getStats()
       setStats(data)
     } catch (error) {
-      console.error("Failed to load analytics:", error)
+      toast.error("Analytics error", "Failed to load analytics data")
     } finally {
       setIsLoading(false)
     }

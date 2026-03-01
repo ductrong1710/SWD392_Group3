@@ -3,6 +3,7 @@
 import type React from "react";
 import { useState } from "react";
 import { Mail, Lock, Loader2 } from "lucide-react";
+import { useToast } from "../../contexts/ToastContext";
 
 interface LoginPageProps {
   onLogin: (email: string, password: string) => Promise<void>;
@@ -14,18 +15,24 @@ export default function LoginPage({ onLogin, onSwitchToRegister }: LoginPageProp
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const toast = useToast();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) return;
+    if (!email || !password) {
+      toast.warning("Missing credentials", "Please enter email and password");
+      return;
+    }
 
     setError("");
     setIsLoading(true);
 
     try {
       await onLogin(email, password);
+      toast.success("Welcome back!", "You have signed in successfully");
     } catch (err) {
       setError("Invalid email or password. Please try again.");
+      toast.error("Login failed", "Invalid email or password");
     } finally {
       setIsLoading(false);
     }
@@ -39,6 +46,7 @@ export default function LoginPage({ onLogin, onSwitchToRegister }: LoginPageProp
       setEmail("customer@example.com");
       setPassword("123456");
     }
+    toast.info("Demo credentials filled", `${demoRole === "admin" ? "Admin" : "Customer"} credentials ready`);
   };
 
   return (
