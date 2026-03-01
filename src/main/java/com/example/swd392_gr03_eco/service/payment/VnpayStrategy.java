@@ -4,7 +4,7 @@ import com.example.swd392_gr03_eco.configs.VnpayConfig;
 import com.example.swd392_gr03_eco.model.entities.Order;
 import com.example.swd392_gr03_eco.service.impl.ExchangeRateService;
 import jakarta.servlet.http.HttpServletRequest;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.io.UnsupportedEncodingException;
@@ -15,20 +15,21 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 @Component("VNPAY")
-@RequiredArgsConstructor
 public class VnpayStrategy implements PaymentStrategy {
 
     private final ExchangeRateService exchangeRateService;
+    private final String returnUrl;
+
+    public VnpayStrategy(ExchangeRateService exchangeRateService, @Value("${frontend.payment-redirect-url}") String returnUrl) {
+        this.exchangeRateService = exchangeRateService;
+        this.returnUrl = returnUrl;
+    }
 
     @Override
     public String createPaymentUrl(Order order, HttpServletRequest request) {
         
-        // --- NEW: Convert USD to VND ---
-        BigDecimal finalAmountUsd = order.getFinalAmount();
-        BigDecimal finalAmountVnd = exchangeRateService.convertUsdToVnd(finalAmountUsd);
-        // VNPAY requires amount in cents (or smallest currency unit), so multiply by 100
+        BigDecimal finalAmountVnd = exchangeRateService.convertUsdToVnd(order.getFinalAmount());
         long amountInCents = finalAmountVnd.longValue() * 100;
-        // -----------------------------
 
         String vnp_Version = "2.1.0";
         String vnp_Command = "pay";
@@ -48,7 +49,7 @@ public class VnpayStrategy implements PaymentStrategy {
         vnp_Params.put("vnp_OrderInfo", vnp_OrderInfo);
         vnp_Params.put("vnp_OrderType", vnp_OrderType);
         vnp_Params.put("vnp_Locale", "vn");
-        vnp_Params.put("vnp_ReturnUrl", VnpayConfig.vnp_ReturnUrl);
+        vnp_Params.put("vnp_ReturnUrl", this.returnUrl); // Use the injected frontend URL
         vnp_Params.put("vnp_IpAddr", vnp_IpAddr);
 
         Calendar cld = Calendar.getInstance(TimeZone.getTimeZone("Etc/GMT+7"));
@@ -92,7 +93,6 @@ public class VnpayStrategy implements PaymentStrategy {
 
     @Override
     public int handleCallback(Map<String, String> params) {
-        // This logic remains the same as it only checks the response code
         String vnp_SecureHash = params.get("vnp_SecureHash");
         params.remove("vnp_SecureHash");
         

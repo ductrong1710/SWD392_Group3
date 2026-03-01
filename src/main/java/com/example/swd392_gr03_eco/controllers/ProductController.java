@@ -65,6 +65,23 @@ public class ProductController {
         return ResponseEntity.ok(productService.searchProducts(keyword, categoryId, brand, minPrice, maxPrice, pageable));
     }
 
+    @GetMapping("/gender/{gender}")
+    public ResponseEntity<Page<ProductSummaryDto>> getProductsByGender(
+            @PathVariable String gender,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size,
+            @RequestParam(defaultValue = "id,asc") String[] sort) {
+        
+        String sortField = sort[0];
+        String sortDirection = sort[1];
+        
+        Sort.Direction direction = sortDirection.equals("desc") ? Sort.Direction.DESC : Sort.Direction.ASC;
+        Sort.Order order = new Sort.Order(direction, sortField);
+        
+        Pageable pageable = PageRequest.of(page, size, Sort.by(order));
+        return ResponseEntity.ok(productService.getProductsByGender(gender, pageable));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<ProductDetailDto> getProductById(@PathVariable Integer id) {
         return ResponseEntity.ok(productService.getProductById(id));

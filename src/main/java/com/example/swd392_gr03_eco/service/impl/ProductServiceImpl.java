@@ -16,6 +16,7 @@ import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -61,6 +63,22 @@ public class ProductServiceImpl implements IProductService {
         };
         Page<Product> productPage = productRepository.findAll(spec, pageable);
         return productPage.map(this::convertToProductSummaryDto);
+    }
+
+    @Override
+    public Page<ProductSummaryDto> getProductsByGender(String gender, Pageable pageable) {
+        String categoryName = "men".equalsIgnoreCase(gender) ? "Men's Fashion" : "women".equalsIgnoreCase(gender) ? "Women's Fashion" : null;
+
+        if (categoryName == null) {
+            return new PageImpl<>(Collections.emptyList(), pageable, 0);
+        }
+
+        return categoryRepository.findByName(categoryName)
+                .map(parentCategory -> {
+                    Page<Product> productPage = productRepository.findByParentCategoryId(parentCategory.getId(), pageable);
+                    return productPage.map(this::convertToProductSummaryDto);
+                })
+                .orElse(new PageImpl<>(Collections.emptyList(), pageable, 0));
     }
 
     @Override

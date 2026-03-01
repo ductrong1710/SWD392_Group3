@@ -1,5 +1,7 @@
 package com.example.swd392_gr03_eco.service.impl;
 
+import com.example.swd392_gr03_eco.model.dto.request.VnpayCallbackDto;
+import com.example.swd392_gr03_eco.model.dto.response.PaymentVerificationResponse;
 import com.example.swd392_gr03_eco.model.entities.Order;
 import com.example.swd392_gr03_eco.model.entities.OrderItem;
 import com.example.swd392_gr03_eco.model.entities.Payment;
@@ -10,6 +12,8 @@ import com.example.swd392_gr03_eco.repositories.ProductVariantRepository;
 import com.example.swd392_gr03_eco.service.interfaces.IPaymentService;
 import com.example.swd392_gr03_eco.service.payment.PaymentStrategy;
 import com.example.swd392_gr03_eco.service.payment.PaymentStrategyFactory;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import java.time.Instant; // Import Instant
+import java.time.Instant;
 import java.util.Map;
 
 @Service
@@ -29,6 +33,7 @@ public class PaymentServiceImpl implements IPaymentService {
     private final OrderRepository orderRepository;
     private final ProductVariantRepository productVariantRepository;
     private final PaymentStrategyFactory strategyFactory;
+    private final ObjectMapper objectMapper;
 
     @Override
     @Transactional
@@ -50,44 +55,39 @@ public class PaymentServiceImpl implements IPaymentService {
 
     @Override
     @Transactional
-    public void handlePaymentCallback(String paymentMethod, Map<String, String> params) {
-        PaymentStrategy strategy = strategyFactory.getStrategy(paymentMethod)
-                .orElseThrow(() -> new IllegalArgumentException("Unsupported payment method: " + paymentMethod));
+    public PaymentVerificationResponse verifyVnpayPayment(VnpayCallbackDto callbackDto) {
+        PaymentStrategy strategy = strategyFactory.getStrategy("VNPAY")
+                .orElseThrow(() -> new IllegalStateException("VNPAY strategy not found"));
 
+        // Convert DTO to Map for the strategy to handle
+        Map<String, String> params = objectMapper.convertValue(callbackDto, new TypeReference<>() {});
+        
         int result = strategy.handleCallback(params);
         
-        String orderIdStr = getOrderIdFromParams(paymentMethod, params);
-        if (orderIdStr == null) {
-            throw new IllegalArgumentException("Order ID is missing from payment callback.");
-        }
-        
-        Integer orderId = Integer.parseInt(orderIdStr);
+        Integer orderId = Integer.parseInt(callbackDto.getVnpTxnRef());
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new EntityNotFoundException("Order not found from callback: " + orderId));
 
         if (result == 0) { // SUCCESS
             order.setStatus("COMPLETED");
             updatePaymentStatus(order, "SUCCESS", params.toString());
+            orderRepository.save(order);
+            return PaymentVerificationResponse.builder()
+                    .success(true)
+                    .message("Payment completed successfully!")
+                    .orderId(orderId)
+                    .build();
         } else { // FAILURE or INVALID SIGNATURE
             order.setStatus("PAYMENT_FAILED");
             updatePaymentStatus(order, "FAILURE", params.toString());
             revertStock(order);
+            orderRepository.save(order);
+            return PaymentVerificationResponse.builder()
+                    .success(false)
+                    .message("Payment failed or signature is invalid.")
+                    .orderId(orderId)
+                    .build();
         }
-        orderRepository.save(order);
-    }
-
-    private String getOrderIdFromParams(String paymentMethod, Map<String, String> params) {
-        if ("VNPAY".equalsIgnoreCase(paymentMethod)) {
-            return params.get("vnp_TxnRef");
-        }
-        if ("MOMO".equalsIgnoreCase(paymentMethod)) {
-            String orderIdWithTimestamp = params.get("orderId");
-            if (orderIdWithTimestamp != null && orderIdWithTimestamp.contains("_")) {
-                return orderIdWithTimestamp.split("_")[0];
-            }
-            return orderIdWithTimestamp;
-        }
-        return null;
     }
 
     private void updatePaymentStatus(Order order, String status, String rawResponse) {
@@ -96,7 +96,7 @@ public class PaymentServiceImpl implements IPaymentService {
         payment.setStatus(status);
         payment.setRawResponseLog(rawResponse);
         if ("SUCCESS".equals(status)) {
-            payment.setPaidAt(Instant.now()); // Use Instant.now()
+            payment.setPaidAt(Instant.now());
         }
         paymentRepository.save(payment);
     }
