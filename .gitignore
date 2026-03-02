@@ -1,0 +1,5 @@
+BackEnd/
+target/
+.env.example
+ENV_SETUP.md
+README.md
