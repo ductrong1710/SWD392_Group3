@@ -67,6 +67,7 @@ export default function GuestLayout({
           <GuestHome
             setCurrentPage={setCurrentPage}
             setSelectedCategory={setSelectedCategory}
+            setRole={setRole}
           />
         )}
         {currentPage === "products" && (

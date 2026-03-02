@@ -2,7 +2,7 @@
 // TYPE DEFINITIONS - Single Source of Truth
 // ============================================
 
-export type UserRole = "guest" | "user" | "admin";
+export type UserRole = "guest" | "user" | "admin" | "staff";
 
 export type PageType =
   | "home"
@@ -20,7 +20,8 @@ export type PageType =
   | "admin-orders"
   | "admin-reviews"
   | "admin-users"
-  | "admin-analytics";
+  | "admin-analytics"
+  | "staff-products";
 
 // Frontend display types (có thể khác với API response)
 export interface Product {

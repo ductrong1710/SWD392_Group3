@@ -1,16 +1,18 @@
 "use client";
 
 import { Dispatch, SetStateAction } from "react";
-import type { PageType } from "../../types";
+import type { PageType, UserRole } from "../../types";
 
 interface GuestHomeProps {
   setCurrentPage: Dispatch<SetStateAction<PageType>>;
   setSelectedCategory: (category: string | null) => void;
+  setRole: Dispatch<SetStateAction<UserRole>>;
 }
 
 export default function GuestHome({
   setCurrentPage,
   setSelectedCategory,
+  setRole,
 }: GuestHomeProps) {
   const handleCategoryClick = (category: string) => {
     setSelectedCategory(category);
@@ -45,6 +47,15 @@ export default function GuestHome({
                 className="px-6 py-3 border border-border rounded-lg hover:bg-secondary transition-colors font-medium"
               >
                 Browse as Guest
+              </button>
+              <button
+                onClick={() => {
+                  setRole("staff");
+                  setCurrentPage("staff-products");
+                }}
+                className="px-6 py-3 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors font-medium"
+              >
+                Staff Portal
               </button>
             </div>
           </div>

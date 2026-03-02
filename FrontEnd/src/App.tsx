@@ -6,6 +6,7 @@ import RegisterPage from "./pages/user/register-page";
 import GuestLayout from "./layouts/guest-layout";
 import UserLayout from "./layouts/user-layout";
 import AdminLayout from "./layouts/admin-layout";
+import StaffLayout from "./layouts/staff-layout";
 import { MOCK_PRODUCTS, MOCK_ORDERS, MOCK_REVIEWS, MOCK_USERS } from "./data/mockData";
 import { authApi, setToken, getToken, removeToken } from "./services/api";
 import type { UserRole, PageType, Product, CartItem, Order, Review, User } from "./types";
@@ -95,6 +96,17 @@ export default function App() {
       <RegisterPage
         onRegister={handleRegister}
         onSwitchToLogin={() => setCurrentPage("login")}
+      />
+    );
+  }
+
+  // Staff layout
+  if (role === "staff") {
+    return (
+      <StaffLayout
+        currentPage={currentPage}
+        setCurrentPage={setCurrentPage}
+        setRole={setRole}
       />
     );
   }

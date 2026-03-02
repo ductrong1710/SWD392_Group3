@@ -69,6 +69,7 @@ export default function UserLayout({
           <UserHome
             setCurrentPage={setCurrentPage}
             setSelectedCategory={setSelectedCategory}
+            setRole={setRole}
           />
         )}
         {currentPage === "products" && (

@@ -1,17 +1,19 @@
 "use client";
 
 import { ArrowRight } from "lucide-react";
-import type { PageType } from "../../types";
+import type { PageType, UserRole } from "../../types";
 import { Dispatch, SetStateAction } from "react";
 
 interface UserHomeProps {
   setCurrentPage: Dispatch<SetStateAction<PageType>>;
   setSelectedCategory: (category: string | null) => void;
+  setRole: Dispatch<SetStateAction<UserRole>>;
 }
 
 export default function UserHome({
   setCurrentPage,
   setSelectedCategory,
+  setRole,
 }: UserHomeProps) {
   const handleCategoryClick = (category: string) => {
     setSelectedCategory(category);
@@ -34,12 +36,23 @@ export default function UserHome({
               Continue shopping your favorite collections with personalized
               recommendations.
             </p>
-            <button
-              onClick={() => setCurrentPage("products")}
-              className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium"
-            >
-              Explore New Arrivals
-            </button>
+            <div className="flex gap-4 flex-wrap">
+              <button
+                onClick={() => setCurrentPage("products")}
+                className="px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium"
+              >
+                Explore New Arrivals
+              </button>
+              <button
+                onClick={() => {
+                  setRole("staff");
+                  setCurrentPage("staff-products");
+                }}
+                className="px-6 py-3 bg-accent text-white rounded-lg hover:bg-accent/90 transition-colors font-medium"
+              >
+                Staff Portal
+              </button>
+            </div>
           </div>
         </div>
       </section>
