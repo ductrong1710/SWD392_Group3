@@ -10,9 +10,13 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Integer>, JpaSpecificationExecutor<Product> {
+
+    // Method to find a product by its exact name
+    Optional<Product> findByName(String name);
 
     @Query(value = "SELECT * FROM products ORDER BY vector_embedding <-> CAST(:embedding AS vector) LIMIT :limit", nativeQuery = true)
     List<Product> findNearestNeighbors(@Param("embedding") String embedding, @Param("limit") int limit);
