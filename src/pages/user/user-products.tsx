@@ -271,7 +271,7 @@ export default function UserProducts({
                     <span className="text-sm text-muted-foreground">{product.brandName}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-lg font-semibold">{product.price.toLocaleString('vi-VN')}$</span>
+                    <span className="text-lg font-semibold">${product.price.toFixed(2)}</span>
                     <button
                       onClick={() => handleProductClick(product.id)}
                       className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-colors text-sm font-medium"

@@ -184,7 +184,7 @@ export default function UserProductDetail({ productId, onClose, onAddToCart }: P
               <h1 className="text-2xl font-serif font-bold mb-4">{product.name}</h1>
 
               <p className="text-2xl font-bold mb-4">
-                {(getSelectedVariant()?.priceOverride || product.basePrice).toLocaleString('vi-VN')}đ
+                ${(getSelectedVariant()?.priceOverride || product.basePrice).toFixed(2)}
               </p>
 
               <p className="text-sm text-muted-foreground mb-6">{product.description}</p>

@@ -27,7 +27,7 @@ export default function UserCheckout({
     phone: "",
     addressLine: "",
     city: "",
-    paymentMethod: "VNPAY" as "VNPAY" | "MOMO" | "COD",
+    paymentMethod: "VNPAY" as "VNPAY" | "COD",
   });
   const toast = useToast();
 
@@ -60,12 +60,16 @@ export default function UserCheckout({
         paymentMethod: formData.paymentMethod,
       });
 
+      // VNPAY: redirect sang payment gateway
+      // Sau khi thanh toán, VNPAY sẽ redirect về /payment-result?vnp_ResponseCode=...
+      // App.tsx sẽ detect và render PaymentResult component
       if (response.paymentUrl) {
-        toast.info("Redirecting", "Redirecting to payment gateway...");
+        toast.info("Redirecting", "Redirecting to VNPay payment gateway...");
         window.location.href = response.paymentUrl;
         return;
       }
 
+      // COD: xử lý trực tiếp
       setCart([]);
       const updatedOrders = await ordersApi.getMyOrders();
       setOrders(updatedOrders);
@@ -142,10 +146,14 @@ export default function UserCheckout({
           {step === 2 && (
             <div className="space-y-4">
               <h3 className="text-xl font-semibold mb-6">Payment Method</h3>
-              {(["VNPAY", "MOMO", "COD"] as const).map((method) => (
+              {(["VNPAY", "COD"] as const).map((method) => (
                 <label
                   key={method}
-                  className="flex items-center gap-3 p-4 border border-border rounded-lg cursor-pointer hover:bg-secondary transition-colors"
+                  className={`flex items-center gap-3 p-4 border rounded-lg cursor-pointer hover:bg-secondary transition-colors ${
+                    formData.paymentMethod === method
+                      ? "border-primary bg-primary/5"
+                      : "border-border"
+                  }`}
                 >
                   <input
                     type="radio"
@@ -153,13 +161,20 @@ export default function UserCheckout({
                     value={method}
                     checked={formData.paymentMethod === method}
                     onChange={(e) =>
-                      setFormData({ ...formData, paymentMethod: e.target.value as "VNPAY" | "MOMO" | "COD" })
+                      setFormData({ ...formData, paymentMethod: e.target.value as "VNPAY" | "COD" })
                     }
                     className="w-4 h-4"
                   />
-                  <span className="font-medium">
-                    {method === "VNPAY" ? "VNPay" : method === "MOMO" ? "MoMo" : "Cash on Delivery"}
-                  </span>
+                  <div>
+                    <span className="font-medium">
+                      {method === "VNPAY" ? "VNPay" : "Cash on Delivery"}
+                    </span>
+                    <p className="text-sm text-muted-foreground">
+                      {method === "VNPAY"
+                        ? "Pay securely via VNPay gateway"
+                        : "Pay when you receive your order"}
+                    </p>
+                  </div>
                 </label>
               ))}
             </div>

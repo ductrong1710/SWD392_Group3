@@ -15,11 +15,6 @@ export default function UserHome({
   setCurrentPage,
   setSelectedCategory,
 }: UserHomeProps) {
-  const toast = useToast();
-
-  useEffect(() => {
-    toast.info("Welcome!", "Browse our latest collections");
-  }, []);
 
   const handleCategoryClick = (category: string) => {
     setSelectedCategory(category);

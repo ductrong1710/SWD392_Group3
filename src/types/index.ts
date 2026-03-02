@@ -13,6 +13,8 @@ export type PageType =
   | "profile"
   | "login"
   | "register"
+    | "payment-result"
+
   | "admin-dashboard"
   | "admin-products"
   | "admin-orders"
@@ -37,6 +39,7 @@ export interface RegisterRequest {
 
 export interface AuthResponse {
   token: string;
+  role: string;
 }
 
 // ============================================
@@ -219,7 +222,7 @@ export interface CheckoutRequest {
     addressLine: string;
     city: string;
   };
-  paymentMethod: "VNPAY" | "MOMO" | "COD";
+  paymentMethod: "VNPAY" | "COD";
 }
 
 export interface CheckoutResponse {

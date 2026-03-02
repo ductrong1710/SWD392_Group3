@@ -6,6 +6,7 @@ import RegisterPage from "./pages/user/register-page";
 import GuestLayout from "./layouts/guest-layout";
 import UserLayout from "./layouts/user-layout";
 import AdminLayout from "./layouts/admin-layout";
+import PaymentResult from "./pages/user/payment-result";
 import { setToken, getToken, removeToken } from "./services/base-api";
 import { authApi } from "./services/auth-api";
 import type {
@@ -105,7 +106,26 @@ export default function App() {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 // Flag to prevent pushing state when handling popstate
   const [isPopState, setIsPopState] = useState(false);
+// ===== Bước 2: Detect VNPAY return URL =====
+  // Khi VNPAY redirect về http://localhost:3000/payment-result?vnp_Amount=...
+  // Chúng ta cần detect và chuyển sang trang payment-result
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const pathname = window.location.pathname;
 
+    // Detect VNPAY callback: URL chứa /payment-result hoặc có vnp_ResponseCode
+    if (
+      pathname.includes("/payment-result") ||
+      params.has("vnp_ResponseCode")
+    ) {
+      // Chỉ xử lý nếu user đã đăng nhập
+      const token = getToken();
+      if (token) {
+        setRole("user");
+        setCurrentPage("payment-result" as PageType);
+      }
+    }
+  }, []);
   // Push history state when navigation changes
   useEffect(() => {
     if (isPopState) {
@@ -166,15 +186,28 @@ export default function App() {
     const token = getToken();
     if (token) {
       try {
-        const payload = JSON.parse(atob(token.split(".")[1]));
-        const userRole =
-          payload.role?.toLowerCase() === "admin" ? "admin" : "user";
+        // Ưu tiên lấy role từ localStorage (đã lưu khi login)
+        const savedRole = localStorage.getItem("userRole");
+        let userRole: "admin" | "user" = "user";
+
+        if (savedRole === "admin" || savedRole === "user") {
+          userRole = savedRole;
+        } else {
+          // Fallback: decode JWT
+          const payload = JSON.parse(atob(token.split(".")[1]));
+          const roleStr = JSON.stringify(
+            payload.role || payload.roles || payload.authorities || payload.scope || ""
+          ).toLowerCase();
+          userRole = roleStr.includes("admin") ? "admin" : "user";
+        }
+
         setRole(userRole);
-        setCurrentPage(
-          userRole === "admin" ? "admin-dashboard" : "home"
-        );
+        if (currentPage !== ("payment-result" as PageType)) {
+          setCurrentPage(userRole === "admin" ? "admin-dashboard" : "home");
+        }
       } catch {
         removeToken();
+        localStorage.removeItem("userRole");
       }
     }
   }, []);
@@ -188,9 +221,14 @@ export default function App() {
     try {
       const response = await authApi.login({ email, password });
       setToken(response.token);
-      const payload = JSON.parse(atob(response.token.split(".")[1]));
+
+      // Dùng role từ response (backend đã trả sẵn)
       const userRole =
-        payload.role?.toLowerCase() === "admin" ? "admin" : "user";
+        response.role?.toLowerCase() === "admin" ? "admin" : "user";
+
+      // Lưu role vào localStorage để dùng khi reload
+      localStorage.setItem("userRole", userRole);
+
       setRole(userRole);
       setCurrentPage(userRole === "admin" ? "admin-dashboard" : "home");
     } catch (error) {
@@ -208,7 +246,12 @@ export default function App() {
     try {
       const response = await authApi.register(data);
       setToken(response.token);
-      setRole("user");
+
+      const userRole =
+        response.role?.toLowerCase() === "admin" ? "admin" : "user";
+      localStorage.setItem("userRole", userRole);
+
+      setRole(userRole);
       setCurrentPage("home");
       return true;
     } catch {
@@ -217,8 +260,9 @@ export default function App() {
   };
 
   // Handle logout
-  const handleLogout = () => {
+    const handleLogout = () => {
     removeToken();
+    localStorage.removeItem("userRole");
     setRole("guest");
     setCurrentPage("home");
     setCart([]);
@@ -298,4 +342,4 @@ export default function App() {
       setSelectedProductId={setSelectedProductId}
     />
   );
-}
+  }
