@@ -59,12 +59,19 @@ public class PaymentServiceImpl implements IPaymentService {
         PaymentStrategy strategy = strategyFactory.getStrategy("VNPAY")
                 .orElseThrow(() -> new IllegalStateException("VNPAY strategy not found"));
 
-        // Convert DTO to Map for the strategy to handle
         Map<String, String> params = objectMapper.convertValue(callbackDto, new TypeReference<>() {});
         
         int result = strategy.handleCallback(params);
         
-        Integer orderId = Integer.parseInt(callbackDto.getVnpTxnRef());
+        // --- CRITICAL FIX: Extract original order ID from the unique transaction reference ---
+        String vnp_TxnRef = callbackDto.getVnpTxnRef();
+        if (vnp_TxnRef == null || vnp_TxnRef.isEmpty()) {
+            throw new IllegalArgumentException("Transaction reference is missing from VNPAY callback.");
+        }
+        String[] refParts = vnp_TxnRef.split("_");
+        Integer orderId = Integer.parseInt(refParts[0]);
+        // ------------------------------------------------------------------------------------
+
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new EntityNotFoundException("Order not found from callback: " + orderId));
 

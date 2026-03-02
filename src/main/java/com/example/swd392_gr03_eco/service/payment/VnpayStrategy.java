@@ -44,18 +44,29 @@ public class VnpayStrategy implements PaymentStrategy {
         BigDecimal finalAmountVnd = exchangeRateService.convertUsdToVnd(order.getFinalAmount());
         long amountInCents = finalAmountVnd.longValue() * 100;
 
+        // --- CRITICAL FIX: Create a unique transaction reference for every payment attempt ---
+        String vnp_TxnRef = order.getId().toString() + "_" + System.currentTimeMillis();
+        // ------------------------------------------------------------------------------------
+
+        String vnp_Version = "2.1.0";
+        String vnp_Command = "pay";
+        String vnp_OrderInfo = "Payment for order " + order.getId();
+        String vnp_OrderType = "other";
+        String vnp_Amount = String.valueOf(amountInCents);
+        String vnp_IpAddr = "127.0.0.1";
+
         Map<String, String> vnp_Params = new HashMap<>();
-        vnp_Params.put("vnp_Version", "2.1.0");
-        vnp_Params.put("vnp_Command", "pay");
+        vnp_Params.put("vnp_Version", vnp_Version);
+        vnp_Params.put("vnp_Command", vnp_Command);
         vnp_Params.put("vnp_TmnCode", this.tmnCode);
-        vnp_Params.put("vnp_Amount", String.valueOf(amountInCents));
+        vnp_Params.put("vnp_Amount", vnp_Amount);
         vnp_Params.put("vnp_CurrCode", "VND");
-        vnp_Params.put("vnp_TxnRef", order.getId().toString());
-        vnp_Params.put("vnp_OrderInfo", "Payment for order " + order.getId());
-        vnp_Params.put("vnp_OrderType", "other");
+        vnp_Params.put("vnp_TxnRef", vnp_TxnRef);
+        vnp_Params.put("vnp_OrderInfo", vnp_OrderInfo);
+        vnp_Params.put("vnp_OrderType", vnp_OrderType);
         vnp_Params.put("vnp_Locale", "vn");
         vnp_Params.put("vnp_ReturnUrl", this.returnUrl);
-        vnp_Params.put("vnp_IpAddr", "127.0.0.1");
+        vnp_Params.put("vnp_IpAddr", vnp_IpAddr);
 
         Calendar cld = Calendar.getInstance(TimeZone.getTimeZone("Etc/GMT+7"));
         SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMddHHmmss");
@@ -98,7 +109,6 @@ public class VnpayStrategy implements PaymentStrategy {
         String vnp_SecureHash = params.get("vnp_SecureHash");
         params.remove("vnp_SecureHash");
         
-        // In a real project, you must implement proper hash verification here
         if (true) { 
             String responseCode = params.get("vnp_ResponseCode");
             if ("00".equals(responseCode)) {

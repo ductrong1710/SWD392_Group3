@@ -34,7 +34,8 @@ import java.util.stream.IntStream;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@Transactional(readOnly = true)
+// REMOVED class-level @Transactional(readOnly = true) to avoid unintended side-effects on other services.
+// Each method will now define its own transactional behavior.
 public class ProductServiceImpl implements IProductService {
 
     private final ProductRepository productRepository;
@@ -42,14 +43,15 @@ public class ProductServiceImpl implements IProductService {
     private final IAiService aiService;
     private final EmbeddingModel embeddingModel;
 
-    // --- Read Operations ---
     @Override
+    @Transactional(readOnly = true)
     public Page<ProductSummaryDto> getAllProducts(Pageable pageable) {
         Page<Product> productPage = productRepository.findAll(pageable);
         return productPage.map(this::convertToProductSummaryDto);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<ProductSummaryDto> searchProducts(String keyword, Integer categoryId, String brand, Double minPrice, Double maxPrice, Pageable pageable) {
         Specification<Product> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -64,8 +66,9 @@ public class ProductServiceImpl implements IProductService {
         Page<Product> productPage = productRepository.findAll(spec, pageable);
         return productPage.map(this::convertToProductSummaryDto);
     }
-
+    
     @Override
+    @Transactional(readOnly = true)
     public Page<ProductSummaryDto> getProductsByGender(String gender, Pageable pageable) {
         String categoryName = "men".equalsIgnoreCase(gender) ? "Men's Fashion" : "women".equalsIgnoreCase(gender) ? "Women's Fashion" : null;
 
@@ -82,6 +85,7 @@ public class ProductServiceImpl implements IProductService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<ProductDetailDto> getAllProductsAdmin() {
         return productRepository.findAll().stream()
                 .map(this::convertToProductDetailDto)
@@ -89,13 +93,12 @@ public class ProductServiceImpl implements IProductService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ProductDetailDto getProductById(Integer id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Product not found with id: " + id));
         return convertToProductDetailDto(product);
     }
-
-    // --- Write Operations ---
 
     @Override
     @Transactional
