@@ -1,5 +1,5 @@
-BackEnd/
-target/
-.env.example
-ENV_SETUP.md
-README.md
+### node_modules ###
+node_modules/
+
+### VS Code ###
+.vscode/
