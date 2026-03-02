@@ -64,7 +64,6 @@ function parseHash(hash: string): {
   let selectedOrderId: string | null = null;
   let selectedCategory: string | null = null;
 
-  // Parse path segments: product/123 or order/456
   for (let i = 1; i < segments.length; i++) {
     if (segments[i] === "product" && segments[i + 1]) {
       selectedProductId = segments[i + 1];
@@ -76,7 +75,6 @@ function parseHash(hash: string): {
     }
   }
 
-  // Parse query params
   if (queryPart) {
     const params = new URLSearchParams(queryPart);
     selectedCategory = params.get("category");
@@ -85,47 +83,44 @@ function parseHash(hash: string): {
   return { page, selectedCategory, selectedProductId, selectedOrderId };
 }
 
+// ===== Detect VNPAY return TRƯỚC khi render (synchronous) =====
+function isVnpayReturn(): boolean {
+  const params = new URLSearchParams(window.location.search);
+  const pathname = window.location.pathname;
+  return pathname.includes("/payment-result") || params.has("vnp_ResponseCode");
+}
+
 export default function App() {
-  // Parse initial state from URL hash
   const initialState = parseHash(window.location.hash);
+
+  // ===== Detect VNPAY ngay trong useState initializer =====
+  const [paymentReturn] = useState<boolean>(() => isVnpayReturn());
 
   const [role, setRole] = useState<UserRole>(() => {
     const saved = localStorage.getItem("role");
     return (saved as UserRole) || "guest";
   });
-  const [currentPage, setCurrentPage] = useState<PageType>("home");
+
+  // Nếu là VNPAY return → khởi tạo luôn "payment-result", không phải "home"
+  const [currentPage, setCurrentPage] = useState<PageType>(() => {
+    if (paymentReturn && getToken()) {
+      return "payment-result";
+    }
+    return "home";
+  });
+
   const [cart, setCart] = useState<CartItem[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<ProductSummary[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedProductId, setSelectedProductId] = useState<string | null>(
-    null
-  );
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
-// Flag to prevent pushing state when handling popstate
   const [isPopState, setIsPopState] = useState(false);
-// ===== Bước 2: Detect VNPAY return URL =====
-  // Khi VNPAY redirect về http://localhost:3000/payment-result?vnp_Amount=...
-  // Chúng ta cần detect và chuyển sang trang payment-result
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const pathname = window.location.pathname;
 
-    // Detect VNPAY callback: URL chứa /payment-result hoặc có vnp_ResponseCode
-    if (
-      pathname.includes("/payment-result") ||
-      params.has("vnp_ResponseCode")
-    ) {
-      // Chỉ xử lý nếu user đã đăng nhập
-      const token = getToken();
-      if (token) {
-        setRole("user");
-        setCurrentPage("payment-result" as PageType);
-      }
-    }
-  }, []);
+  // ===== XÓA useEffect detect VNPAY cũ — đã dời lên useState =====
+
   // Push history state when navigation changes
   useEffect(() => {
     if (isPopState) {
@@ -137,7 +132,6 @@ export default function App() {
     const hash = pageToHash(currentPage, extras);
     const state = buildHistoryState(currentPage, extras);
 
-    // Only push if hash actually changed
     if (window.location.hash !== hash) {
       window.history.pushState(state, "", hash);
     }
@@ -153,7 +147,6 @@ export default function App() {
       setSelectedProductId(event.state.selectedProductId || null);
       setSelectedOrderId(event.state.selectedOrderId || null);
     } else {
-      // Fallback: parse from hash
       const parsed = parseHash(window.location.hash);
       setCurrentPage(parsed.page);
       setSelectedCategory(parsed.selectedCategory);
@@ -165,7 +158,6 @@ export default function App() {
   useEffect(() => {
     window.addEventListener("popstate", handlePopState);
 
-    // Set initial history state
     const extras = { selectedCategory, selectedProductId, selectedOrderId };
     const hash = pageToHash(currentPage, extras);
     const state = buildHistoryState(currentPage, extras);
@@ -186,14 +178,12 @@ export default function App() {
     const token = getToken();
     if (token) {
       try {
-        // Ưu tiên lấy role từ localStorage (đã lưu khi login)
         const savedRole = localStorage.getItem("userRole");
         let userRole: "admin" | "user" = "user";
 
         if (savedRole === "admin" || savedRole === "user") {
           userRole = savedRole;
         } else {
-          // Fallback: decode JWT
           const payload = JSON.parse(atob(token.split(".")[1]));
           const roleStr = JSON.stringify(
             payload.role || payload.roles || payload.authorities || payload.scope || ""
@@ -202,7 +192,9 @@ export default function App() {
         }
 
         setRole(userRole);
-        if (currentPage !== ("payment-result" as PageType)) {
+
+        // ===== KHÔNG override nếu đang là payment return =====
+        if (!paymentReturn) {
           setCurrentPage(userRole === "admin" ? "admin-dashboard" : "home");
         }
       } catch {
@@ -222,11 +214,9 @@ export default function App() {
       const response = await authApi.login({ email, password });
       setToken(response.token);
 
-      // Dùng role từ response (backend đã trả sẵn)
       const userRole =
         response.role?.toLowerCase() === "admin" ? "admin" : "user";
 
-      // Lưu role vào localStorage để dùng khi reload
       localStorage.setItem("userRole", userRole);
 
       setRole(userRole);
@@ -260,7 +250,7 @@ export default function App() {
   };
 
   // Handle logout
-    const handleLogout = () => {
+  const handleLogout = () => {
     removeToken();
     localStorage.removeItem("userRole");
     setRole("guest");
@@ -268,6 +258,18 @@ export default function App() {
     setCart([]);
     setOrders([]);
   };
+
+  // ===== Payment Result Page =====
+  if (currentPage === "payment-result") {
+    return (
+      <PaymentResult
+        setCurrentPage={setCurrentPage}
+        setCart={setCart}
+        setOrders={setOrders}
+        setSelectedOrderId={setSelectedOrderId}
+      />
+    );
+  }
 
   // Login page
   if (currentPage === "login") {
@@ -342,4 +344,4 @@ export default function App() {
       setSelectedProductId={setSelectedProductId}
     />
   );
-  }
+}
