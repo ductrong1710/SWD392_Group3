@@ -1,11 +1,11 @@
 export default function Footer() {
   return (
-    <footer className="bg-primary text-primary-foreground">
+    <footer className="bg-black text-white">
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
           <div>
-            <h4 className="font-semibold mb-4">Shop</h4>
-            <ul className="space-y-2 text-sm">
+            <h4 className="font-serif font-semibold mb-4">Shop</h4>
+            <ul className="space-y-2 text-sm font-serif">
               <li>
                 <button className="hover:underline opacity-80 hover:opacity-100 transition-opacity">
                   Men
@@ -30,8 +30,8 @@ export default function Footer() {
           </div>
 
           <div>
-            <h4 className="font-semibold mb-4">Customer Service</h4>
-            <ul className="space-y-2 text-sm">
+            <h4 className="font-serif font-semibold mb-4">Customer Service</h4>
+            <ul className="space-y-2 text-sm font-serif">
               <li>
                 <button className="hover:underline opacity-80 hover:opacity-100 transition-opacity">
                   Contact Us
@@ -56,8 +56,8 @@ export default function Footer() {
           </div>
 
           <div>
-            <h4 className="font-semibold mb-4">About</h4>
-            <ul className="space-y-2 text-sm">
+            <h4 className="font-serif font-semibold mb-4">About</h4>
+            <ul className="space-y-2 text-sm font-serif">
               <li>
                 <button className="hover:underline opacity-80 hover:opacity-100 transition-opacity">
                   Our Story
@@ -82,8 +82,8 @@ export default function Footer() {
           </div>
 
           <div>
-            <h4 className="font-semibold mb-4">Connect</h4>
-            <ul className="space-y-2 text-sm">
+            <h4 className="font-serif font-semibold mb-4">Connect</h4>
+            <ul className="space-y-2 text-sm font-serif">
               <li>
                 <button className="hover:underline opacity-80 hover:opacity-100 transition-opacity">
                   Instagram
@@ -108,7 +108,7 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="border-t border-primary-foreground/20 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-sm opacity-80">
+        <div className="border-t border-primary-foreground/20 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-sm font-serif opacity-80">
           <p>&copy; 2026 Fashion Store. All rights reserved.</p>
           <div className="flex gap-6">
             <button className="hover:underline">Privacy Policy</button>

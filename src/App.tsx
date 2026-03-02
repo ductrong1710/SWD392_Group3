@@ -91,6 +91,13 @@ function isVnpayReturn(): boolean {
 }
 
 export default function App() {
+  // Disable browser scroll restoration
+  useEffect(() => {
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+  }, []);
+
   const initialState = parseHash(window.location.hash);
 
   // ===== Detect VNPAY ngay trong useState initializer =====

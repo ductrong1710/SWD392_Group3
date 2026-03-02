@@ -16,7 +16,7 @@ export default function AdminHeader({
   setSidebarOpen,
 }: AdminHeaderProps) {
   return (
-    <header className="sticky top-0 bg-background border-b border-border z-40">
+    <header className="sticky top-0 bg-background border-b border-border z-50">
       <div className="px-6 py-4 flex items-center justify-between">
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}

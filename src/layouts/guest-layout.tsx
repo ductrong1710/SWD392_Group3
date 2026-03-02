@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Dispatch, SetStateAction } from "react";
+import { useState, Dispatch, SetStateAction } from "react";
 import GuestHeader from "../component/headers/guest-header";
 import type { PageType, UserRole, ProductSummary } from "../types";
 import GuestHome from "../pages/guest/guest-home";
@@ -31,10 +31,6 @@ export default function GuestLayout({
   setSelectedProductId,
 }: GuestLayoutProps) {
   const [showLoginModal, setShowLoginModal] = useState(false);
-
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [currentPage, selectedCategory]);
 
   const handleCheckout = () => {
     setShowLoginModal(true);
