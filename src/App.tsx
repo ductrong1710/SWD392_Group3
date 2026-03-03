@@ -305,6 +305,7 @@ export default function App() {
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
         setRole={setRole}
+        onLogout={handleLogout}
         products={products}
         setProducts={setProducts}
         orders={orders}

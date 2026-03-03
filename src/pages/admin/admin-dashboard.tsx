@@ -1,20 +1,116 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts"
-import { TrendingUp, ShoppingBag, Users, DollarSign } from "lucide-react"
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts"
+import { TrendingUp, ShoppingBag, Users, DollarSign, Package, ArrowUpRight } from "lucide-react"
 import type { ProductSummary, Order, Review, User, DashboardStats } from "../../types"
 import { dashboardApi } from "../../services/dashboard-api"
 import { useToast } from "../../contexts/ToastContext"
 
 interface AdminDashboardProps {
-  products: ProductSummary[];
-  orders: Order[];
-  reviews: Review[];
-  users: User[];
+  products: ProductSummary[]
+  orders: Order[]
+  reviews: Review[]
+  users: User[]
 }
 
-export default function AdminDashboard({ products, orders, reviews, users }: AdminDashboardProps) {
+/* ------------------------------------------------------------------ */
+/*  Small reusable pieces – scoped to this page                       */
+/* ------------------------------------------------------------------ */
+
+interface StatCardProps {
+  label: string
+  value: string
+  change: string
+  icon: React.ElementType
+  iconBg: string
+}
+
+function StatCard({ label, value, change, icon: Icon, iconBg }: StatCardProps) {
+  return (
+    <div className="bg-card border border-border rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
+      <div className="flex items-center gap-4">
+        <div className={`flex items-center justify-center w-12 h-12 rounded-xl ${iconBg}`}>
+          <Icon className="w-5 h-5" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            {label}
+          </p>
+          <p className="text-2xl font-bold text-foreground leading-tight mt-0.5">{value}</p>
+        </div>
+      </div>
+      <div className="mt-4 flex items-center gap-1 text-xs font-medium text-green-600">
+        <ArrowUpRight className="w-3.5 h-3.5" />
+        {change}
+      </div>
+    </div>
+  )
+}
+
+function SectionCard({
+  title,
+  children,
+  className = "",
+}: {
+  title: string
+  children: React.ReactNode
+  className?: string
+}) {
+  return (
+    <div className={`bg-card border border-border rounded-2xl shadow-sm ${className}`}>
+      <div className="px-6 py-4 border-b border-border">
+        <h3 className="text-base font-semibold text-foreground">{title}</h3>
+      </div>
+      <div className="p-6">{children}</div>
+    </div>
+  )
+}
+
+function OrderStatusBadge({ status }: { status: string }) {
+  const styles: Record<string, string> = {
+    COMPLETED: "bg-green-100 text-green-700",
+    CANCELLED: "bg-red-100 text-red-700",
+    SHIPPING: "bg-blue-100 text-blue-700",
+    PENDING: "bg-yellow-100 text-yellow-700",
+  }
+
+  const cls = styles[status] ?? styles.PENDING
+
+  return (
+    <span className={`inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${cls}`}>
+      {status}
+    </span>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/*  Helpers                                                            */
+/* ------------------------------------------------------------------ */
+
+function formatCurrency(amount: number): string {
+  return amount.toLocaleString("vi-VN") + "₫"
+}
+
+/* ------------------------------------------------------------------ */
+/*  Main component                                                     */
+/* ------------------------------------------------------------------ */
+
+export default function AdminDashboard({
+  products,
+  orders,
+  reviews,
+  users,
+}: AdminDashboardProps) {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const toast = useToast()
@@ -35,154 +131,199 @@ export default function AdminDashboard({ products, orders, reviews, users }: Adm
     }
   }
 
+  /* ---------- derived data ---------- */
+
   const totalRevenue = stats?.totalRevenue ?? 0
   const newOrders = stats?.newOrdersCount ?? 0
   const newUsers = stats?.newUsersCount ?? 0
-  const avgOrderValue = orders.length > 0
-    ? (orders.reduce((sum, o) => sum + o.finalAmount, 0) / orders.length).toFixed(2)
-    : "0.00"
 
-  const statCards = [
+  const statCards: StatCardProps[] = [
     {
-      label: "Total Revenue",
-      value: `$${totalRevenue.toFixed(2)}`,
-      change: "+12%",
+      label: "Tổng doanh thu",
+      value: formatCurrency(totalRevenue),
+      change: `${newOrders} đơn trong 30 ngày`,
       icon: DollarSign,
-      color: "bg-accent/10 text-accent",
+      iconBg: "bg-primary/10 text-primary",
     },
     {
-      label: "New Orders",
+      label: "Đơn hàng mới (30 ngày)",
       value: newOrders.toString(),
-      change: "+8%",
+      change: "Trong 30 ngày qua",
       icon: ShoppingBag,
-      color: "bg-blue-100 text-blue-600",
+      iconBg: "bg-blue-100 text-blue-600",
     },
     {
-      label: "New Users",
+      label: "Người dùng mới (30 ngày)",
       value: newUsers.toString(),
-      change: "+5%",
+      change: "Trong 30 ngày qua",
       icon: Users,
-      color: "bg-green-100 text-green-600",
+      iconBg: "bg-green-100 text-green-600",
     },
     {
-      label: "Avg Order Value",
-      value: `$${avgOrderValue}`,
-      change: "+3%",
+      label: "Tổng sản phẩm",
+      value: (stats?.topSellingProducts?.length ?? 0).toString(),
+      change: "Sản phẩm đang bán chạy",
       icon: TrendingUp,
-      color: "bg-purple-100 text-purple-600",
+      iconBg: "bg-purple-100 text-purple-600",
     },
   ]
 
-  // Revenue over time chart data
-  const chartData = stats?.revenueOverTime?.map((item) => ({
-    name: item.date,
-    revenue: item.revenue,
-  })) ?? []
+  const chartData =
+    stats?.revenueOverTime?.map((item) => ({
+      name: item.date,
+      revenue: item.revenue,
+    })) ?? []
 
-  // Top selling products from API
   const topProducts = stats?.topSellingProducts ?? []
+
+  /* ---------- loading state ---------- */
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="flex flex-col items-center justify-center py-24 gap-3">
+        <div className="animate-spin rounded-full h-10 w-10 border-[3px] border-muted border-t-primary" />
+        <p className="text-sm text-muted-foreground">Đang tải dữ liệu…</p>
       </div>
     )
   }
 
+  /* ---------- render ---------- */
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
+      {/* Page header */}
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Tổng quan hiệu suất cửa hàng
+        </p>
+      </div>
+
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {statCards.map((stat) => {
-          const Icon = stat.icon
-          return (
-            <div key={stat.label} className="bg-card border border-border rounded-lg p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-medium text-muted-foreground">{stat.label}</h3>
-                <div className={`p-2 rounded-lg ${stat.color}`}>
-                  <Icon className="w-5 h-5" />
-                </div>
-              </div>
-              <p className="text-2xl font-bold mb-2">{stat.value}</p>
-              <p className="text-xs text-green-600 font-medium">{stat.change} from last week</p>
-            </div>
-          )
-        })}
+      <div className="grid grid-cols-4 gap-4">
+        {statCards.map((stat) => (
+          <StatCard key={stat.label} {...stat} />
+        ))}
       </div>
 
       {/* Revenue Chart */}
-      <div className="bg-card border border-border rounded-lg p-6">
-        <h3 className="text-lg font-semibold mb-6">Revenue Over Time</h3>
+      <SectionCard title="Biểu đồ doanh thu theo ngày">
         {chartData.length > 0 ? (
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-              <XAxis dataKey="name" stroke="var(--color-muted-foreground)" />
-              <YAxis stroke="var(--color-muted-foreground)" />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="revenue" fill="var(--color-primary)" name="Revenue" />
+          <ResponsiveContainer width="100%" height={320}>
+            <BarChart data={chartData} barSize={32}>
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="var(--color-border)"
+                vertical={false}
+              />
+              <XAxis
+                dataKey="name"
+                stroke="var(--color-muted-foreground)"
+                tick={{ fontSize: 12 }}
+                tickLine={false}
+                axisLine={false}
+              />
+              <YAxis
+                stroke="var(--color-muted-foreground)"
+                tick={{ fontSize: 12 }}
+                tickLine={false}
+                axisLine={false}
+                tickFormatter={(v: number) => v.toLocaleString("vi-VN") + "₫"}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "var(--color-card)",
+                  border: "1px solid var(--color-border)",
+                  borderRadius: "0.75rem",
+                  fontSize: 13,
+                }}
+                formatter={(value: number) => [formatCurrency(value), "Doanh thu"]}
+                labelFormatter={(label: string) => `Ngày: ${label}`}
+              />
+              <Legend wrapperStyle={{ fontSize: 13 }} />
+              <Bar
+                dataKey="revenue"
+                fill="var(--color-primary)"
+                name="Doanh thu"
+                radius={[6, 6, 0, 0]}
+              />
             </BarChart>
           </ResponsiveContainer>
         ) : (
-          <p className="text-sm text-muted-foreground text-center py-10">No revenue data available</p>
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Top Selling Products */}
-        <div className="bg-card border border-border rounded-lg p-6">
-          <h3 className="text-lg font-semibold mb-6">Top Selling Products</h3>
-          <div className="space-y-4">
-            {topProducts.map((product, index) => (
-              <div
-                key={product.productId ?? index}
-                className="flex items-center justify-between pb-4 border-b border-border last:border-0"
-              >
-                <div>
-                  <p className="font-medium">{product.productName}</p>
-                  <p className="text-sm text-muted-foreground">{product.totalQuantitySold} sold</p>
-                </div>
-              </div>
-            ))}
-            {topProducts.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-4">No sales data available</p>
-            )}
+          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+            <DollarSign className="w-10 h-10 mb-2 opacity-40" />
+            <p className="text-sm">Chưa có dữ liệu doanh thu</p>
           </div>
-        </div>
+        )}
+      </SectionCard>
+
+      {/* Bottom grid */}
+      <div className="grid grid-cols-2 gap-6">
+        {/* Top Selling Products */}
+        <SectionCard title="Sản phẩm bán chạy nhất">
+          {topProducts.length > 0 ? (
+            <ul className="divide-y divide-border">
+              {topProducts.map((product, index) => (
+                <li
+                  key={product.productId}
+                  className="flex items-center gap-4 py-3 first:pt-0 last:pb-0"
+                >
+                  <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-muted text-xs font-bold text-muted-foreground">
+                    #{index + 1}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">
+                      {product.productName}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Đã bán: {product.totalQuantitySold} sản phẩm
+                    </p>
+                  </div>
+                  <Package className="w-4 h-4 text-muted-foreground/50 shrink-0" />
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
+              <ShoppingBag className="w-10 h-10 mb-2 opacity-40" />
+              <p className="text-sm">Chưa có dữ liệu bán hàng</p>
+            </div>
+          )}
+        </SectionCard>
 
         {/* Recent Orders */}
-        <div className="bg-card border border-border rounded-lg p-6">
-          <h3 className="text-lg font-semibold mb-6">Recent Orders</h3>
-          <div className="space-y-4">
-            {orders.slice(0, 5).map((order) => (
-              <div
-                key={order.orderId}
-                className="flex items-center justify-between pb-4 border-b border-border last:border-0"
-              >
-                <div>
-                  <p className="font-medium">Order #{order.orderId}</p>
-                  <p className="text-sm text-muted-foreground">{order.orderDate}</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-semibold">${order.finalAmount.toFixed(2)}</p>
-                  <span className={`text-xs px-2 py-1 rounded ${
-                    order.status === "COMPLETED" ? "bg-green-100 text-green-600" :
-                    order.status === "CANCELLED" ? "bg-red-100 text-red-600" :
-                    order.status === "SHIPPING" ? "bg-blue-100 text-blue-600" :
-                    "bg-yellow-100 text-yellow-600"
-                  }`}>
-                    {order.status}
-                  </span>
-                </div>
-              </div>
-            ))}
-            {orders.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-4">No orders yet</p>
-            )}
-          </div>
-        </div>
+        <SectionCard title="Đơn hàng gần đây">
+          {orders.length > 0 ? (
+            <ul className="divide-y divide-border">
+              {orders.slice(0, 5).map((order) => (
+                <li
+                  key={order.orderId}
+                  className="flex items-center justify-between py-3 first:pt-0 last:pb-0"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground">
+                      Đơn hàng #{order.orderId}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {order.orderDate}
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1 shrink-0 ml-4">
+                    <p className="text-sm font-semibold text-foreground">
+                      {formatCurrency(order.finalAmount)}
+                    </p>
+                    <OrderStatusBadge status={order.status} />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
+              <ShoppingBag className="w-10 h-10 mb-2 opacity-40" />
+              <p className="text-sm">Chưa có đơn hàng</p>
+            </div>
+          )}
+        </SectionCard>
       </div>
     </div>
   )

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import type {
   UserRole,
   PageType,
@@ -19,13 +19,12 @@ import AdminUsers from "../pages/admin/admin-users";
 import AdminAnalytics from "../pages/admin/admin-analytics";
 import ChatbotWidget from "../component/common/chatbot-widget";
 
-// ❌ XÓA tất cả interface Product, CartItem, Order, Review, User cũ ở đây
-
 interface AdminLayoutProps {
   role: UserRole;
   setRole: (role: UserRole) => void;
   currentPage: PageType;
   setCurrentPage: (page: PageType) => void;
+  onLogout: () => void;
   products: ProductSummary[];
   setProducts: (products: ProductSummary[]) => void;
   orders: Order[];
@@ -41,6 +40,7 @@ export default function AdminLayout({
   setRole,
   currentPage,
   setCurrentPage,
+  onLogout,
   products,
   setProducts,
   orders,
@@ -54,17 +54,11 @@ export default function AdminLayout({
     window.scrollTo(0, 0);
   }, [currentPage]);
 
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <AdminHeader
-        setRole={setRole}
-        sidebarOpen={sidebarOpen}
-        setSidebarOpen={setSidebarOpen}
-      />
+      <AdminHeader onLogout={onLogout} />
       <AdminTaskbar currentPage={currentPage} setCurrentPage={setCurrentPage} />
-      <main className="flex-1 overflow-auto px-4 md:px-8 py-8">
+      <main className="flex-1 overflow-auto px-8 py-8">
         {currentPage === "admin-dashboard" && (
           <AdminDashboard
             products={products}
