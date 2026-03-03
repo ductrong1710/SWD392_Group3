@@ -1,12 +1,15 @@
 package com.example.swd392_gr03_eco.service.impl;
 
+import com.example.swd392_gr03_eco.model.dto.request.ImageRequestDto;
 import com.example.swd392_gr03_eco.model.dto.request.ProductCreateRequest;
 import com.example.swd392_gr03_eco.model.dto.request.ProductUpdateRequest;
 import com.example.swd392_gr03_eco.model.dto.request.ProductUpdateStatusRequest;
 import com.example.swd392_gr03_eco.model.dto.response.*;
 import com.example.swd392_gr03_eco.model.entities.*;
 import com.example.swd392_gr03_eco.repositories.CategoryRepository;
+import com.example.swd392_gr03_eco.repositories.ProductImageRepository;
 import com.example.swd392_gr03_eco.repositories.ProductRepository;
+import com.example.swd392_gr03_eco.repositories.ProductVariantRepository;
 import com.example.swd392_gr03_eco.service.interfaces.IAiService;
 import com.example.swd392_gr03_eco.service.interfaces.IProductService;
 import dev.langchain4j.data.embedding.Embedding;
@@ -34,24 +37,24 @@ import java.util.stream.IntStream;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-// REMOVED class-level @Transactional(readOnly = true) to avoid unintended side-effects on other services.
-// Each method will now define its own transactional behavior.
+@Transactional(readOnly = true)
 public class ProductServiceImpl implements IProductService {
 
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
+    private final ProductVariantRepository productVariantRepository;
+    private final ProductImageRepository productImageRepository;
     private final IAiService aiService;
     private final EmbeddingModel embeddingModel;
 
+    // --- Read Operations ---
     @Override
-    @Transactional(readOnly = true)
     public Page<ProductSummaryDto> getAllProducts(Pageable pageable) {
         Page<Product> productPage = productRepository.findAll(pageable);
         return productPage.map(this::convertToProductSummaryDto);
     }
 
     @Override
-    @Transactional(readOnly = true)
     public Page<ProductSummaryDto> searchProducts(String keyword, Integer categoryId, String brand, Double minPrice, Double maxPrice, Pageable pageable) {
         Specification<Product> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -68,7 +71,6 @@ public class ProductServiceImpl implements IProductService {
     }
     
     @Override
-    @Transactional(readOnly = true)
     public Page<ProductSummaryDto> getProductsByGender(String gender, Pageable pageable) {
         String categoryName = "men".equalsIgnoreCase(gender) ? "Men's Fashion" : "women".equalsIgnoreCase(gender) ? "Women's Fashion" : null;
 
@@ -85,7 +87,6 @@ public class ProductServiceImpl implements IProductService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<ProductDetailDto> getAllProductsAdmin() {
         return productRepository.findAll().stream()
                 .map(this::convertToProductDetailDto)
@@ -93,7 +94,6 @@ public class ProductServiceImpl implements IProductService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public ProductDetailDto getProductById(Integer id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Product not found with id: " + id));
@@ -116,22 +116,45 @@ public class ProductServiceImpl implements IProductService {
                 .isActive(true)
                 .createdAt(Instant.now())
                 .build();
+        
+        // Save product first to get an ID
+        Product savedProduct = productRepository.saveAndFlush(product);
 
+        // --- NEW: Handle Images ---
+        if (request.getImages() != null && !request.getImages().isEmpty()) {
+            List<ProductImage> images = new ArrayList<>();
+            for (ImageRequestDto imgDto : request.getImages()) {
+                images.add(ProductImage.builder()
+                        .product(savedProduct)
+                        .imageUrl(imgDto.getImageUrl())
+                        .isThumbnail(imgDto.getIsThumbnail())
+                        .color(imgDto.getColor())
+                        .build());
+            }
+            productImageRepository.saveAll(images);
+            savedProduct.setProductImages(images);
+        }
+
+        // --- Handle Variants ---
         List<ProductVariant> variants = new ArrayList<>();
-        if (request.getVariants() != null) {
+        if (request.getVariants() != null && !request.getVariants().isEmpty()) {
             for (ProductCreateRequest.VariantDTO dto : request.getVariants()) {
                 variants.add(ProductVariant.builder()
-                        .product(product).sku(dto.getSku()).color(dto.getColor())
-                        .size(dto.getSize()).material(dto.getMaterial())
+                        .product(savedProduct)
+                        .sku(dto.getSku())
+                        .color(dto.getColor())
+                        .size(dto.getSize())
+                        .material(dto.getMaterial())
                         .priceOverride(dto.getPriceOverride())
-                        .stockQuantity(dto.getStockQuantity()).build());
+                        .stockQuantity(dto.getStockQuantity())
+                        .build());
             }
+            savedProduct.setProductVariants(variants);
         }
-        product.setProductVariants(variants);
         
-        updateVectorForProduct(product);
+        updateVectorForProduct(savedProduct);
 
-        return productRepository.save(product);
+        return productRepository.save(savedProduct);
     }
 
     @Override
@@ -194,11 +217,13 @@ public class ProductServiceImpl implements IProductService {
         }
         dto.setCategory(categoryDto);
 
+
         dto.setProductImages(product.getProductImages().stream().map(image -> {
             ProductImageDto imageDto = new ProductImageDto();
             imageDto.setId(image.getId());
             imageDto.setImageUrl(image.getImageUrl());
             imageDto.setIsThumbnail(image.getIsThumbnail());
+            imageDto.setColor(image.getColor());
             return imageDto;
         }).collect(Collectors.toList()));
 
@@ -235,16 +260,16 @@ public class ProductServiceImpl implements IProductService {
 
     private void updateVectorForProduct(Product product) {
         StringBuilder embeddingBuilder = new StringBuilder();
-        embeddingBuilder.append(product.getName()).append(". ");
-        embeddingBuilder.append(product.getDescription()).append(". ");
-        embeddingBuilder.append("Hãng: ").append(product.getBrandName()).append(". ");
+        embeddingBuilder.append("Name: ").append(product.getName()).append(". ");
+        embeddingBuilder.append("Description: ").append(product.getDescription()).append(". ");
+        embeddingBuilder.append("Brand: ").append(product.getBrandName()).append(". ");
 
         if (product.getProductVariants() != null && !product.getProductVariants().isEmpty()) {
             Set<String> colors = product.getProductVariants().stream().map(ProductVariant::getColor).collect(Collectors.toSet());
             Set<String> materials = product.getProductVariants().stream().map(ProductVariant::getMaterial).collect(Collectors.toSet());
 
-            if (!colors.isEmpty()) embeddingBuilder.append("Các màu hiện có: ").append(String.join(", ", colors)).append(". ");
-            if (!materials.isEmpty()) embeddingBuilder.append("Chất liệu: ").append(String.join(", ", materials)).append(". ");
+            if (!colors.isEmpty()) embeddingBuilder.append("Available colors: ").append(String.join(", ", colors)).append(". ");
+            if (!materials.isEmpty()) embeddingBuilder.append("Materials: ").append(String.join(", ", materials)).append(". ");
         }
 
         Embedding embedding = embeddingModel.embed(embeddingBuilder.toString()).content();
