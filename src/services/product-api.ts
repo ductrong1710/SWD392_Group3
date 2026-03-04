@@ -96,6 +96,7 @@ export const productsApi = {
   create: (data: ProductCreateRequest): Promise<ProductDetail> =>
     fetchApi("/v1/products", {
       method: "POST",
+      
       body: JSON.stringify(data),
     }),
 
@@ -107,4 +108,9 @@ export const productsApi = {
 
   delete: (id: number): Promise<void> =>
     fetchApi(`/v1/products/${id}`, { method: "DELETE" }),
+
+  getAllUnpaged: (): Promise<ProductDetail[]> => {
+    return fetchApi("/v1/products/all");
+  },
 };
+

@@ -97,6 +97,7 @@ export interface ProductSummary {
   price: number;
   brandName: string;
   thumbnailUrl: string | null;
+  category?: Category;
 }
 
 // ============================================
@@ -321,13 +322,25 @@ export interface ProductCreateRequest {
   description: string;
   brandName: string;
   basePrice: number;
-  categoryId: number;
-  variants: {
-    sku: string;
-    color: string;
-    size: string;
-    material?: string;
-    priceOverride?: number;
-    stockQuantity: number;
-  }[];
+  images?: ImageRequestDto[];       // Cannot find name 'ImageRequestDto'.ts(2304)
+  variants?: VariantRequestDto[];  //Cannot find name 'VariantRequestDto'.ts(2304)
+}
+// ============================================
+// PRODUCT CREATE/UPDATE REQUEST
+// ============================================
+
+export interface ImageRequestDto {
+  imageUrl: string;
+  isThumbnail: boolean;
+  color?: string;
+}
+
+
+export interface VariantRequestDto {
+  sku: string;
+  color: string;
+  size: string;
+  material?: string;
+  priceOverride?: number;
+  stockQuantity: number;
 }
