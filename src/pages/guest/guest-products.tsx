@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Heart, Eye } from "lucide-react"
 import type { ProductSummary } from "../../types"
-import { fetchProducts } from "../../services/product-api"
+import { fetchProducts, searchProducts } from "../../services/product-api"
 import { useToast } from "../../contexts/ToastContext"
 
 interface GuestProductsProps {
@@ -24,14 +24,35 @@ export default function GuestProducts({
   const [apiProducts, setApiProducts] = useState<ProductSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [categoryName, setCategoryName] = useState<string | null>(null)
   const toast = useToast()
 
   useEffect(() => {
     const loadProducts = async () => {
       try {
         setLoading(true)
-        const response = await fetchProducts({ page: 0, size: 12, sort: 'id', order: 'asc' })
-        setApiProducts(response.content)
+
+        if (selectedCategory) {
+          // Filter by categoryId
+          const response = await searchProducts({ categoryId: Number(selectedCategory) })
+          setApiProducts(response.content)
+
+          // Lấy tên category để hiển thị
+          try {
+            const { fetchApi } = await import("../../services/base-api")
+            const categories = await fetchApi<{ id: number; name: string }[]>("/v1/categories")
+            const found = categories.find((c) => String(c.id) === selectedCategory)
+            setCategoryName(found?.name || null)
+          } catch {
+            setCategoryName(null)
+          }
+        } else {
+          // Load all
+          const response = await fetchProducts({ page: 0, size: 12, sort: 'id', order: 'asc' })
+          setApiProducts(response.content)
+          setCategoryName(null)
+        }
+
         setError(null)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load products')
@@ -42,7 +63,7 @@ export default function GuestProducts({
     }
 
     loadProducts()
-  }, [])
+  }, [selectedCategory]) // ← Re-fetch khi category thay đổi
 
   // Map API products to display format
   const displayProducts = apiProducts.map((apiProduct) => ({
@@ -61,15 +82,28 @@ export default function GuestProducts({
   return (
     <div className="max-w-7xl mx-auto px-4 py-12">
       <div className="mb-8">
-        <h2 className="text-3xl font-serif font-semibold mb-2">
-          {selectedCategory ? `${selectedCategory} Collection` : "All Products"}
-        </h2>
-        <p className="text-muted-foreground">Browse our collection. Login to add items to cart.</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-3xl font-serif font-semibold mb-2">
+              {categoryName ? `${categoryName} Collection` : "All Products"}
+            </h2>
+            <p className="text-muted-foreground">Browse our collection. Login to add items to cart.</p>
+          </div>
+          {selectedCategory && (
+            <button
+              onClick={() => setSelectedCategory(null)}
+              className="px-4 py-2 border border-border rounded-lg hover:bg-secondary transition-colors text-sm font-medium"
+            >
+              ← All Products
+            </button>
+          )}
+        </div>
       </div>
 
       {loading && (
         <div className="text-center py-12">
-          <p className="text-muted-foreground">Loading Products...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="text-muted-foreground mt-4">Loading Products...</p>
         </div>
       )}
 
@@ -84,6 +118,14 @@ export default function GuestProducts({
           {displayProducts.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground text-lg">No products found</p>
+              {selectedCategory && (
+                <button
+                  onClick={() => setSelectedCategory(null)}
+                  className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+                >
+                  View All Products
+                </button>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

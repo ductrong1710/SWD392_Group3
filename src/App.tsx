@@ -104,6 +104,13 @@ export default function App() {
   const [paymentReturn] = useState<boolean>(() => isVnpayReturn());
 
   const [role, setRole] = useState<UserRole>(() => {
+    const token = getToken();
+    if (!token) {
+      // Không có token → chắc chắn là guest, xóa luôn role cũ
+      localStorage.removeItem("role");
+      localStorage.removeItem("userRole");
+      return "guest";
+    }
     const saved = localStorage.getItem("role");
     return (saved as UserRole) || "guest";
   });
@@ -260,6 +267,7 @@ export default function App() {
   const handleLogout = () => {
     removeToken();
     localStorage.removeItem("userRole");
+    localStorage.removeItem("role");
     setRole("guest");
     setCurrentPage("home");
     setCart([]);
