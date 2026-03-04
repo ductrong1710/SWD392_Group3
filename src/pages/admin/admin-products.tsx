@@ -28,7 +28,9 @@ export default function AdminProducts({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const toast = useToast();
-  const [editingProductDetail, setEditingProductDetail] = useState<any | null>(null);
+  const [editingProductDetail, setEditingProductDetail] = useState<any | null>(
+    null
+  );
   const [showEditModal, setShowEditModal] = useState(false);
   const [isFetchingDetail, setIsFetchingDetail] = useState<number | null>(null);
 
@@ -38,12 +40,12 @@ export default function AdminProducts({
 
   const handleEditClick = async (productId: number) => {
     try {
-      setIsFetchingDetail(productId); // Bật loading cho dòng này
-      const detailData = await productsApi.getById(productId); // Gọi API lấy chi tiết
+      setIsFetchingDetail(productId);
+      const detailData = await productsApi.getById(productId);
       setEditingProductDetail(detailData);
       setShowEditModal(true);
     } catch (error) {
-      toast.error("Lỗi", "Không thể lấy thông tin chi tiết sản phẩm");
+      toast.error("Error", "Failed to retrieve product details");
     } finally {
       setIsFetchingDetail(null);
     }
@@ -54,7 +56,6 @@ export default function AdminProducts({
       setIsSubmitting(true);
       const response = await productsApi.update(id, updateData);
 
-      // Cập nhật lại list sản phẩm đang hiển thị (tìm thằng vừa sửa và update data mới)
       const updatedProducts = products.map((p) => {
         if (p.id === id) {
           return {
@@ -62,18 +63,26 @@ export default function AdminProducts({
             name: updateData.name,
             brandName: updateData.brandName,
             price: updateData.basePrice,
-            // Tìm tên Category từ mảng uniqueCategories dựa vào ID vừa submit
-            category: uniqueCategories.find((c: any) => c.id === updateData.categoryId) || p.category,
+            category:
+              uniqueCategories.find(
+                (c: any) => c.id === updateData.categoryId
+              ) || p.category,
           };
         }
         return p;
       });
 
       setProducts(updatedProducts);
-      toast.success("Thành công", "Đã cập nhật thông tin sản phẩm");
+      toast.success(
+        "Success",
+        "Product information has been updated successfully"
+      );
       setShowEditModal(false);
     } catch (error: any) {
-      toast.error("Cập nhật thất bại", error.response?.data?.message || "Lỗi không xác định");
+      toast.error(
+        "Update Failed",
+        error.response?.data?.message || "An unknown error occurred"
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -101,13 +110,13 @@ export default function AdminProducts({
 
       setProducts([newSummaryItem, ...products]);
 
-      toast.success("Thành công", "AI đã phân loại và thêm sản phẩm!");
+      toast.success("Success", "AI has classified and added the product successfully!");
       setShowAddModal(false);
     } catch (error: any) {
       // Lấy chính xác error message từ Response của Axios/Fetch
       const backendError = error.response?.data?.message || error.message;
-      console.error("Chi tiết lỗi:", error.response?.data);
-      toast.error("Tạo thất bại", backendError);
+      console.error("Error details:", error.response?.data);
+      toast.error("Creation Failed", backendError || "Failed to create product");
     } finally {
       setIsSubmitting(false);
     }
@@ -116,17 +125,18 @@ export default function AdminProducts({
   const loadProducts = async () => {
     try {
       setIsLoading(true);
-      // ✅ 3. Đổi sang gọi API lấy tất cả data (/v1/products/all)
-      const data: any[] = await productsApi.getAllUnpaged(); 
-      
-      // ✅ 4. Map data chi tiết sang Summary và nhét thêm category vào
+      const data: any[] = await productsApi.getAllUnpaged();
+
+     
       const mappedProducts: ExtendedProductSummary[] = data.map((item) => ({
         id: item.id,
         name: item.name,
         brandName: item.brandName,
         price: item.basePrice,
-        thumbnailUrl: item.productImages?.find((img: any) => img.isThumbnail)?.imageUrl || null,
-        category: item.category, 
+        thumbnailUrl:
+          item.productImages?.find((img: any) => img.isThumbnail)?.imageUrl ||
+          null,
+        category: item.category,
       }));
 
       setProducts(mappedProducts);
@@ -137,7 +147,7 @@ export default function AdminProducts({
     }
   };
 
-  // ✅ 5. Bóc tách và lọc trùng Category từ list sản phẩm
+ 
   const uniqueCategories = useMemo(() => {
     const map = new Map();
     products.forEach((p) => {
@@ -148,19 +158,18 @@ export default function AdminProducts({
     return Array.from(map.values());
   }, [products]);
 
-  // ✅ 6. Lọc sản phẩm theo Search Name VÀ Category
+ 
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
-      const matchSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchCategory = selectedCategoryId === "" || p.category?.id === selectedCategoryId;
+      const matchSearch = p.name
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
+      const matchCategory =
+        selectedCategoryId === "" || p.category?.id === selectedCategoryId;
       return matchSearch && matchCategory;
     });
   }, [products, searchTerm, selectedCategoryId]);
-  // const filteredProducts = useMemo(() => {
-  //   return products.filter((p) =>
-  //     p.name.toLowerCase().includes(searchTerm.toLowerCase())
-  //   )
-  // }, [products, searchTerm])
+
 
   const handleDeleteProduct = useCallback(
     async (id: number) => {
@@ -203,72 +212,78 @@ export default function AdminProducts({
       </div>
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-        {/* ✅ 2. Giao diện Search + Nút Menu 3 gạch (Custom Dropdown) */}
-      <div className="flex items-center gap-3">
-        {/* Thanh Search (Kéo dài hết cỡ) */}
-        <div className="flex-1 flex items-center gap-2 bg-background border border-border rounded-lg px-3 py-2">
-          <Search className="w-4 h-4 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Search products by name..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1 bg-transparent outline-none text-sm"
-          />
-        </div>
-
-        {/* Cụm Filter Category (Relative để nhốt cái menu absolute vào trong) */}
-        <div className="relative">
-          {/* Nút bấm 3 gạch */}
-          <button
-            onClick={() => setShowCategoryMenu(!showCategoryMenu)}
-            className={`p-2 border border-border rounded-lg transition-colors flex items-center justify-center
-              ${showCategoryMenu ? 'bg-secondary' : 'bg-background hover:bg-secondary'}
-            `}
-            title="Lọc theo danh mục"
-          >
-            <Menu className="w-5 h-5 text-foreground" />
-          </button>
+       
+        <div className="flex items-center gap-3">
+          
+          <div className="flex-1 flex items-center gap-2 bg-background border border-border rounded-lg px-3 py-2">
+            <Search className="w-4 h-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search products by name..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="flex-1 bg-transparent outline-none text-sm"
+            />
+          </div>
 
           
-          {showCategoryMenu && (
-            <div className="absolute right-0 mt-2 w-56 bg-card border border-border rounded-lg shadow-xl z-50 py-2 overflow-hidden">
-              <div className="px-3 py-2 border-b border-border text-xs font-semibold text-muted-foreground uppercase">
-                CATEGORIES
-              </div>
-              
-              
-              <button
-                className={`w-full text-left px-4 py-2 text-sm hover:bg-secondary transition-colors ${
-                  selectedCategoryId === "" ? "font-bold text-primary bg-primary/10" : ""
-                }`}
-                onClick={() => {
-                  setSelectedCategoryId("");
-                  setShowCategoryMenu(false); 
-                }}
-              >
-               All Categories
-              </button>
+          <div className="relative">
+            
+            <button
+              onClick={() => setShowCategoryMenu(!showCategoryMenu)}
+              className={`p-2 border border-border rounded-lg transition-colors flex items-center justify-center
+              ${
+                showCategoryMenu
+                  ? "bg-secondary"
+                  : "bg-background hover:bg-secondary"
+              }
+            `}
+              title="Filter by category"
+            >
+              <Menu className="w-5 h-5 text-foreground" />
+            </button>
 
-              {/* Danh sách categories từ useMemo */}
-              {uniqueCategories.map((cat: any) => (
+            {showCategoryMenu && (
+              <div className="absolute right-0 mt-2 w-56 bg-card border border-border rounded-lg shadow-xl z-50 py-2 overflow-hidden">
+                <div className="px-3 py-2 border-b border-border text-xs font-semibold text-muted-foreground uppercase">
+                  CATEGORIES
+                </div>
+
                 <button
-                  key={cat.id}
                   className={`w-full text-left px-4 py-2 text-sm hover:bg-secondary transition-colors ${
-                    selectedCategoryId === cat.id ? "font-bold text-primary bg-primary/10" : ""
+                    selectedCategoryId === ""
+                      ? "font-bold text-primary bg-primary/10"
+                      : ""
                   }`}
                   onClick={() => {
-                    setSelectedCategoryId(cat.id);
-                    setShowCategoryMenu(false); 
+                    setSelectedCategoryId("");
+                    setShowCategoryMenu(false);
                   }}
                 >
-                  {cat.name}
+                  All Categories
                 </button>
-              ))}
-            </div>
-          )}
+
+               
+                {uniqueCategories.map((cat: any) => (
+                  <button
+                    key={cat.id}
+                    className={`w-full text-left px-4 py-2 text-sm hover:bg-secondary transition-colors ${
+                      selectedCategoryId === cat.id
+                        ? "font-bold text-primary bg-primary/10"
+                        : ""
+                    }`}
+                    onClick={() => {
+                      setSelectedCategoryId(cat.id);
+                      setShowCategoryMenu(false);
+                    }}
+                  >
+                    {cat.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
       </div>
 
       {/* Products Table */}
@@ -313,17 +328,17 @@ export default function AdminProducts({
                     ${product.price.toFixed(2)}
                   </td>
                   {/* Action */}
-                  <td className="px-6 py-4">  
+                  <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
-                      <button 
+                      <button
                         onClick={() => handleEditClick(product.id)}
                         disabled={isFetchingDetail === product.id}
                         className="p-2 hover:bg-secondary rounded transition-colors disabled:opacity-50"
                       >
                         {isFetchingDetail === product.id ? (
-                           <span className="w-4 h-4 block rounded-full border-2 border-primary border-t-transparent animate-spin"></span>
+                          <span className="w-4 h-4 block rounded-full border-2 border-primary border-t-transparent animate-spin"></span>
                         ) : (
-                           <Edit2 className="w-4 h-4 text-muted-foreground" />
+                          <Edit2 className="w-4 h-4 text-muted-foreground" />
                         )}
                       </button>
                       <button
@@ -361,13 +376,13 @@ export default function AdminProducts({
       <ProductEditModal
         isOpen={showEditModal}
         onClose={() => {
-           setShowEditModal(false);
-           setEditingProductDetail(null);
+          setShowEditModal(false);
+          setEditingProductDetail(null);
         }}
         onSave={handleUpdateProduct}
         productData={editingProductDetail}
         isSubmitting={isSubmitting}
-        categories={uniqueCategories} 
+        categories={uniqueCategories}
       />
     </div>
   );

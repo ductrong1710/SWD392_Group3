@@ -6,6 +6,7 @@ import RegisterPage from "./pages/user/register-page";
 import GuestLayout from "./layouts/guest-layout";
 import UserLayout from "./layouts/user-layout";
 import AdminLayout from "./layouts/admin-layout";
+import StaffLayout from "./layouts/staff-layout";
 import PaymentResult from "./pages/user/payment-result";
 import { setToken, getToken, removeToken } from "./services/base-api";
 import { authApi } from "./services/auth-api";
@@ -20,12 +21,18 @@ import type {
 } from "./types";
 
 // Helper: build state object for history
-function buildHistoryState(page: PageType, extras?: Record<string, string | null>) {
+function buildHistoryState(
+  page: PageType,
+  extras?: Record<string, string | null>
+) {
   return { page, ...extras };
 }
 
 // Helper: build URL hash from page
-function pageToHash(page: PageType, extras?: Record<string, string | null>): string {
+function pageToHash(
+  page: PageType,
+  extras?: Record<string, string | null>
+): string {
   let hash = `#/${page}`;
   if (extras?.selectedProductId) {
     hash += `/product/${extras.selectedProductId}`;
@@ -93,8 +100,8 @@ function isVnpayReturn(): boolean {
 export default function App() {
   // Disable browser scroll restoration
   useEffect(() => {
-    if ('scrollRestoration' in window.history) {
-      window.history.scrollRestoration = 'manual';
+    if ("scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
     }
   }, []);
 
@@ -122,7 +129,9 @@ export default function App() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(
+    null
+  );
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [isPopState, setIsPopState] = useState(false);
 
@@ -186,23 +195,37 @@ export default function App() {
     if (token) {
       try {
         const savedRole = localStorage.getItem("userRole");
-        let userRole: "admin" | "user" = "user";
+        let userRole: "admin" | "staff" | "user" = "user";
 
-        if (savedRole === "admin" || savedRole === "user") {
+        if (
+          savedRole === "admin" ||
+          savedRole === "user" ||
+          savedRole === "staff"
+        ) {
           userRole = savedRole;
         } else {
           const payload = JSON.parse(atob(token.split(".")[1]));
           const roleStr = JSON.stringify(
-            payload.role || payload.roles || payload.authorities || payload.scope || ""
+            payload.role ||
+              payload.roles ||
+              payload.authorities ||
+              payload.scope ||
+              ""
           ).toLowerCase();
-          userRole = roleStr.includes("admin") ? "admin" : "user";
+          if (roleStr.includes("admin")) userRole = "admin";
+          else if (roleStr.includes("staff"))
+            userRole = "staff"; // Nhận diện staff
+          else userRole = "user";
         }
 
         setRole(userRole);
 
         // ===== KHÔNG override nếu đang là payment return =====
         if (!paymentReturn) {
-          setCurrentPage(userRole === "admin" ? "admin-dashboard" : "home");
+          if (userRole === "admin") setCurrentPage("admin-dashboard");
+          else if (userRole === "staff")
+            setCurrentPage("staff-dashboard"); // Chuyển trang staff
+          else setCurrentPage("home");
         }
       } catch {
         removeToken();
@@ -221,13 +244,29 @@ export default function App() {
       const response = await authApi.login({ email, password });
       setToken(response.token);
 
-      const userRole =
-        response.role?.toLowerCase() === "admin" ? "admin" : "user";
+      const roleStr = response.role?.toLowerCase() || "";
+      let userRole: UserRole = "user";
+
+      if (roleStr === "admin") userRole = "admin";
+      else if (roleStr === "staff") userRole = "staff";
 
       localStorage.setItem("userRole", userRole);
-
       setRole(userRole);
-      setCurrentPage(userRole === "admin" ? "admin-dashboard" : "home");
+
+      if (userRole === "admin") setCurrentPage("admin-dashboard");
+      else if (userRole === "staff") setCurrentPage("staff-dashboard");
+      else setCurrentPage("home");
+
+      // const response = await authApi.login({ email, password });
+      // setToken(response.token);
+
+      // const userRole =
+      //   response.role?.toLowerCase() === "admin" ? "admin" : "user";
+
+      // localStorage.setItem("userRole", userRole);
+
+      // setRole(userRole);
+      // setCurrentPage(userRole === "admin" ? "admin-dashboard" : "home");
     } catch (error) {
       throw error;
     }
@@ -335,6 +374,23 @@ export default function App() {
         setSelectedProductId={setSelectedProductId}
         selectedOrderId={selectedOrderId}
         setSelectedOrderId={setSelectedOrderId}
+      />
+    );
+  }
+
+  
+  if (role === "staff") {
+    return (
+      <StaffLayout
+        role={role}
+        currentPage={currentPage}
+        setCurrentPage={setCurrentPage}
+        setRole={setRole}
+        onLogout={handleLogout}
+        products={products}
+        setProducts={setProducts}
+        orders={orders}
+        setOrders={setOrders}
       />
     );
   }
