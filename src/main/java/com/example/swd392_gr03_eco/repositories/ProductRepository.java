@@ -23,4 +23,6 @@ public interface ProductRepository extends JpaRepository<Product, Integer>, JpaS
 
     @Query("SELECT p FROM Product p WHERE p.category.parent.id = :parentCategoryId AND p.isActive = true")
     Page<Product> findByParentCategoryId(@Param("parentCategoryId") Integer parentCategoryId, Pageable pageable);
+
+    Page<Product> findByCategoryIdIn(List<Long> categoryIds, Pageable pageable);
 }

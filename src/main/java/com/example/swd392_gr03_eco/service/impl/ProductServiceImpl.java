@@ -69,10 +69,11 @@ public class ProductServiceImpl implements IProductService {
         Page<Product> productPage = productRepository.findAll(spec, pageable);
         return productPage.map(this::convertToProductSummaryDto);
     }
-    
+
     @Override
     public Page<ProductSummaryDto> getProductsByGender(String gender, Pageable pageable) {
-        String categoryName = "men".equalsIgnoreCase(gender) ? "Men's Fashion" : "women".equalsIgnoreCase(gender) ? "Women's Fashion" : null;
+        String categoryName = "men".equalsIgnoreCase(gender) ? "Men's Fashion" :
+                "women".equalsIgnoreCase(gender) ? "Women's Fashion" : null;
 
         if (categoryName == null) {
             return new PageImpl<>(Collections.emptyList(), pageable, 0);
@@ -80,7 +81,12 @@ public class ProductServiceImpl implements IProductService {
 
         return categoryRepository.findByName(categoryName)
                 .map(parentCategory -> {
-                    Page<Product> productPage = productRepository.findByParentCategoryId(parentCategory.getId(), pageable);
+                    // 1. Lấy tất cả ID của chính nó và các con/cháu
+                    List<Long> allIds = categoryRepository.findAllSubCategoryIds(parentCategory.getId());
+
+                    // 2. Tìm sản phẩm nằm trong danh sách ID đó
+                    Page<Product> productPage = productRepository.findByCategoryIdIn(allIds, pageable);
+
                     return productPage.map(this::convertToProductSummaryDto);
                 })
                 .orElse(new PageImpl<>(Collections.emptyList(), pageable, 0));
