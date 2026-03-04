@@ -6,6 +6,11 @@ interface CategoriesSectionProps {
   setSelectedCategory: (category: string | null) => void;
 }
 
+const GENDER_MAP: Record<string, string> = {
+  "Women's Fashion": "gender:women",
+  "Men's Fashion": "gender:men",
+};
+
 const categories = [
   {
     name: "Women's Fashion",
@@ -24,7 +29,9 @@ export default function CategoriesSection({
   setSelectedCategory,
 }: CategoriesSectionProps) {
   const handleCategoryClick = (categoryName: string) => {
-    setSelectedCategory(categoryName);
+    // Convert category name to "gender:men" or "gender:women" format
+    const filterValue = GENDER_MAP[categoryName] ?? categoryName;
+    setSelectedCategory(filterValue);
     setCurrentPage("products");
   };
 
@@ -33,7 +40,7 @@ export default function CategoriesSection({
       <h3 className="text-4xl font-serif font-semibold mb-8">
         Shop by Category
       </h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="grid grid-cols-2 gap-8">
         {categories.map((cat) => (
           <button
             key={cat.name}

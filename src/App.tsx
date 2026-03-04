@@ -34,12 +34,11 @@ function pageToHash(page: PageType, extras?: Record<string, string | null>): str
     hash += `/order/${extras.selectedOrderId}`;
   }
   if (extras?.selectedCategory) {
-    hash += `?category=${extras.selectedCategory}`;
+    hash += `?category=${encodeURIComponent(extras.selectedCategory)}`;
   }
   return hash;
 }
 
-// Helper: parse hash to page state
 function parseHash(hash: string): {
   page: PageType;
   selectedCategory: string | null;
@@ -77,7 +76,8 @@ function parseHash(hash: string): {
 
   if (queryPart) {
     const params = new URLSearchParams(queryPart);
-    selectedCategory = params.get("category");
+    const cat = params.get("category");
+    selectedCategory = cat ? decodeURIComponent(cat) : null;
   }
 
   return { page, selectedCategory, selectedProductId, selectedOrderId };
@@ -265,7 +265,9 @@ export default function App() {
 
   // Handle logout
   const handleLogout = () => {
+    console.log("[logout] token BEFORE:", localStorage.getItem("token")); // phải có token
     removeToken();
+    console.log("[logout] token AFTER:", localStorage.getItem("token"));  // phải là null
     localStorage.removeItem("userRole");
     localStorage.removeItem("role");
     setRole("guest");
@@ -332,6 +334,7 @@ export default function App() {
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
         setRole={setRole}
+        onLogout={handleLogout}
         cart={cart}
         setCart={setCart}
         orders={orders}

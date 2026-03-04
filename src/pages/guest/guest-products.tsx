@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Heart, Eye } from "lucide-react"
 import type { ProductSummary } from "../../types"
-import { fetchProducts, searchProducts } from "../../services/product-api"
+import { productsApi } from "../../services/product-api"
 import { useToast } from "../../contexts/ToastContext"
 
 interface GuestProductsProps {
@@ -15,6 +15,18 @@ interface GuestProductsProps {
   onCheckout: () => void
 }
 
+function parseFilter(selected: string | null):
+  | { type: "all" }
+  | { type: "gender"; value: "men" | "women" }
+  | { type: "category"; value: number } {
+  if (!selected) return { type: "all" }
+  if (selected.startsWith("gender:")) {
+    const gender = selected.replace("gender:", "") as "men" | "women"
+    return { type: "gender", value: gender }
+  }
+  return { type: "category", value: Number(selected) }
+}
+
 export default function GuestProducts({
   products,
   selectedCategory,
@@ -24,48 +36,41 @@ export default function GuestProducts({
   const [apiProducts, setApiProducts] = useState<ProductSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [categoryName, setCategoryName] = useState<string | null>(null)
+  const [filterLabel, setFilterLabel] = useState<string | null>(null)
   const toast = useToast()
 
   useEffect(() => {
-    const loadProducts = async () => {
-      try {
-        setLoading(true)
+    loadProductsByFilter()
+  }, [selectedCategory])
 
-        if (selectedCategory) {
-          // Filter by categoryId
-          const response = await searchProducts({ categoryId: Number(selectedCategory) })
-          setApiProducts(response.content)
+  const loadProductsByFilter = async () => {
+    try {
+      setLoading(true)
+      const filter = parseFilter(selectedCategory)
 
-          // Lấy tên category để hiển thị
-          try {
-            const { fetchApi } = await import("../../services/base-api")
-            const categories = await fetchApi<{ id: number; name: string }[]>("/v1/categories")
-            const found = categories.find((c) => String(c.id) === selectedCategory)
-            setCategoryName(found?.name || null)
-          } catch {
-            setCategoryName(null)
-          }
-        } else {
-          // Load all
-          const response = await fetchProducts({ page: 0, size: 12, sort: 'id', order: 'asc' })
-          setApiProducts(response.content)
-          setCategoryName(null)
-        }
-
-        setError(null)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load products')
-        toast.error("Loading failed", "Could not load products")
-      } finally {
-        setLoading(false)
+      if (filter.type === "gender") {
+        const response = await productsApi.getByGender(filter.value, 0, 12)
+        setApiProducts(response.content)
+        setFilterLabel(filter.value === "men" ? "Men's Fashion" : "Women's Fashion")
+      } else if (filter.type === "category") {
+        const response = await productsApi.search({ categoryId: filter.value })
+        setApiProducts(response.content)
+        setFilterLabel(null)
+      } else {
+        const response = await productsApi.getAll(0, 12)
+        setApiProducts(response.content)
+        setFilterLabel(null)
       }
+
+      setError(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load products')
+      toast.error("Loading failed", "Could not load products")
+    } finally {
+      setLoading(false)
     }
+  }
 
-    loadProducts()
-  }, [selectedCategory]) // ← Re-fetch khi category thay đổi
-
-  // Map API products to display format
   const displayProducts = apiProducts.map((apiProduct) => ({
     id: apiProduct.id.toString(),
     name: apiProduct.name,
@@ -85,7 +90,7 @@ export default function GuestProducts({
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-3xl font-serif font-semibold mb-2">
-              {categoryName ? `${categoryName} Collection` : "All Products"}
+              {filterLabel ? `${filterLabel} Collection` : "All Products"}
             </h2>
             <p className="text-muted-foreground">Browse our collection. Login to add items to cart.</p>
           </div>
@@ -128,7 +133,7 @@ export default function GuestProducts({
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-4 gap-6">
               {displayProducts.map((product) => (
                 <div key={product.id} className="group">
                   <div className="bg-secondary rounded-lg h-64 mb-4 flex items-center justify-center relative overflow-hidden">

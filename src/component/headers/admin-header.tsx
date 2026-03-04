@@ -13,7 +13,10 @@ export default function AdminHeader({ onLogout }: AdminHeaderProps) {
 
         <div className="flex items-center gap-4">
           <button
-            onClick={onLogout}
+            onClick={() => {
+              console.log("=== LOGOUT BUTTON CLICKED ===");
+              onLogout();
+            }}
             className="flex items-center gap-2 px-3 py-2 hover:bg-secondary rounded transition-colors text-sm"
           >
             <LogOut className="w-4 h-4" />

@@ -23,6 +23,7 @@ interface UserLayoutProps {
   currentPage: PageType;
   setCurrentPage: Dispatch<SetStateAction<PageType>>;
   setRole: Dispatch<SetStateAction<UserRole>>;
+  onLogout: () => void;
   cart: CartItem[];
   setCart: (cart: CartItem[]) => void;
   orders: Order[];
@@ -40,6 +41,7 @@ export default function UserLayout({
   currentPage,
   setCurrentPage,
   setRole,
+  onLogout,
   cart,
   setCart,
   orders,
@@ -61,7 +63,7 @@ export default function UserLayout({
       <UserHeader
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
-        setRole={setRole}
+        onLogout={onLogout}  // ← truyền xuống thay vì setRole
         cartCount={cart.length}
       />
       <main className="flex-1 pt-16">
