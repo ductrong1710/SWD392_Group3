@@ -7,6 +7,7 @@ import { productsApi } from "../../services/product-api";
 import { useToast } from "../../contexts/ToastContext";
 import type { ProductCreateRequest } from "../../types";
 import ProductFormModal from "./ProductFormModal";
+import ProductEditModal from "./ProductEditModal";
 
 interface AdminProductsProps {
   products: ProductSummary[];
@@ -27,10 +28,56 @@ export default function AdminProducts({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const toast = useToast();
+  const [editingProductDetail, setEditingProductDetail] = useState<any | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [isFetchingDetail, setIsFetchingDetail] = useState<number | null>(null);
 
   useEffect(() => {
     loadProducts();
   }, []);
+
+  const handleEditClick = async (productId: number) => {
+    try {
+      setIsFetchingDetail(productId); // Bật loading cho dòng này
+      const detailData = await productsApi.getById(productId); // Gọi API lấy chi tiết
+      setEditingProductDetail(detailData);
+      setShowEditModal(true);
+    } catch (error) {
+      toast.error("Lỗi", "Không thể lấy thông tin chi tiết sản phẩm");
+    } finally {
+      setIsFetchingDetail(null);
+    }
+  };
+
+  const handleUpdateProduct = async (id: number, updateData: any) => {
+    try {
+      setIsSubmitting(true);
+      const response = await productsApi.update(id, updateData);
+
+      // Cập nhật lại list sản phẩm đang hiển thị (tìm thằng vừa sửa và update data mới)
+      const updatedProducts = products.map((p) => {
+        if (p.id === id) {
+          return {
+            ...p,
+            name: updateData.name,
+            brandName: updateData.brandName,
+            price: updateData.basePrice,
+            // Tìm tên Category từ mảng uniqueCategories dựa vào ID vừa submit
+            category: uniqueCategories.find((c: any) => c.id === updateData.categoryId) || p.category,
+          };
+        }
+        return p;
+      });
+
+      setProducts(updatedProducts);
+      toast.success("Thành công", "Đã cập nhật thông tin sản phẩm");
+      setShowEditModal(false);
+    } catch (error: any) {
+      toast.error("Cập nhật thất bại", error.response?.data?.message || "Lỗi không xác định");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleAddProduct = async (formData: ProductCreateRequest) => {
     try {
@@ -183,21 +230,21 @@ export default function AdminProducts({
             <Menu className="w-5 h-5 text-foreground" />
           </button>
 
-          {/* Menu xổ xuống (Chỉ hiện khi showCategoryMenu = true) */}
+          
           {showCategoryMenu && (
             <div className="absolute right-0 mt-2 w-56 bg-card border border-border rounded-lg shadow-xl z-50 py-2 overflow-hidden">
               <div className="px-3 py-2 border-b border-border text-xs font-semibold text-muted-foreground uppercase">
                 CATEGORIES
               </div>
               
-              {/* Nút "Tất cả" */}
+              
               <button
                 className={`w-full text-left px-4 py-2 text-sm hover:bg-secondary transition-colors ${
                   selectedCategoryId === "" ? "font-bold text-primary bg-primary/10" : ""
                 }`}
                 onClick={() => {
                   setSelectedCategoryId("");
-                  setShowCategoryMenu(false); // Bấm xong tự đóng
+                  setShowCategoryMenu(false); 
                 }}
               >
                All Categories
@@ -212,7 +259,7 @@ export default function AdminProducts({
                   }`}
                   onClick={() => {
                     setSelectedCategoryId(cat.id);
-                    setShowCategoryMenu(false); // Bấm xong tự đóng
+                    setShowCategoryMenu(false); 
                   }}
                 >
                   {cat.name}
@@ -265,10 +312,19 @@ export default function AdminProducts({
                   <td className="px-6 py-4 font-semibold">
                     ${product.price.toFixed(2)}
                   </td>
-                  <td className="px-6 py-4">
+                  {/* Action */}
+                  <td className="px-6 py-4">  
                     <div className="flex items-center gap-2">
-                      <button className="p-2 hover:bg-secondary rounded transition-colors">
-                        <Edit2 className="w-4 h-4 text-muted-foreground" />
+                      <button 
+                        onClick={() => handleEditClick(product.id)}
+                        disabled={isFetchingDetail === product.id}
+                        className="p-2 hover:bg-secondary rounded transition-colors disabled:opacity-50"
+                      >
+                        {isFetchingDetail === product.id ? (
+                           <span className="w-4 h-4 block rounded-full border-2 border-primary border-t-transparent animate-spin"></span>
+                        ) : (
+                           <Edit2 className="w-4 h-4 text-muted-foreground" />
+                        )}
                       </button>
                       <button
                         onClick={() => handleDeleteProduct(product.id)}
@@ -301,6 +357,17 @@ export default function AdminProducts({
         onClose={() => setShowAddModal(false)}
         onSave={handleAddProduct}
         isSubmitting={isSubmitting}
+      />
+      <ProductEditModal
+        isOpen={showEditModal}
+        onClose={() => {
+           setShowEditModal(false);
+           setEditingProductDetail(null);
+        }}
+        onSave={handleUpdateProduct}
+        productData={editingProductDetail}
+        isSubmitting={isSubmitting}
+        categories={uniqueCategories} 
       />
     </div>
   );

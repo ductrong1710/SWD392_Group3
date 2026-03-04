@@ -17,7 +17,7 @@ export default function AdminTaskbar({
     { id: "admin-dashboard", label: "Dashboard" },
     { id: "admin-products", label: "Products" },
     { id: "admin-orders", label: "Orders" },
-    { id: "admin-reviews", label: "Reviews" },
+    //{ id: "admin-reviews", label: "Reviews" },
     { id: "admin-users", label: "Users" },
     { id: "admin-analytics", label: "Analytics" },
   ];
