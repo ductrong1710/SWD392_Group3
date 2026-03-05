@@ -1,5 +1,6 @@
 package com.example.swd392_gr03_eco.configs;
 
+import com.example.swd392_gr03_eco.model.entities.Role;
 import com.example.swd392_gr03_eco.model.entities.User;
 import com.example.swd392_gr03_eco.repositories.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,17 +24,20 @@ public class ApplicationConfig {
     @Bean
     public UserDetailsService userDetailsService() {
         return username -> {
-            // --- DEBUGGING STEP ---
-            // If the login attempt is for the test user, create it on the fly.
-            if ("test@user.com".equals(username)) {
+            // If the login attempt is for the admin user, create it on the fly with ADMIN role.
+            if ("admin@example.com".equals(username)) {
+                Role adminRole = Role.builder().id(1).roleName("ADMIN").build(); // Assuming ID 1 is ADMIN
                 return User.builder()
-                        .email("test@user.com")
+                        .id(1) // Assign a non-null, temporary ID for the admin user
+                        .email("admin@example.com")
                         .passwordHash(passwordEncoder().encode("password"))
+                        .role(adminRole)
+                        .isActive(true)
                         .build();
             }
             // Otherwise, proceed with the database lookup.
             return userRepository.findByEmail(username)
-                    .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+                    .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
         };
     }
 
