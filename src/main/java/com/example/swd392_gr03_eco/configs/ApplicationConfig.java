@@ -30,7 +30,7 @@ public class ApplicationConfig {
                 return User.builder()
                         .id(1) // Assign a non-null, temporary ID for the admin user
                         .email("admin@example.com")
-                        .passwordHash(passwordEncoder().encode("password"))
+                        .passwordHash(passwordEncoder().encode("123456"))
                         .role(adminRole)
                         .isActive(true)
                         .build();
