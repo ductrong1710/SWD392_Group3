@@ -85,7 +85,7 @@ public class ProductServiceImpl implements IProductService {
                     List<Long> allIds = categoryRepository.findAllSubCategoryIds(parentCategory.getId());
 
                     // 2. Tìm sản phẩm nằm trong danh sách ID đó
-                    Page<Product> productPage = productRepository.findByCategoryIdIn(allIds, pageable);
+                    Page<Product> productPage = productRepository.findByCategoryIdInAndIsActive(allIds, true, pageable);
 
                     return productPage.map(this::convertToProductSummaryDto);
                 })
