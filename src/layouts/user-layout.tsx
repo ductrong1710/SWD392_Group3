@@ -63,7 +63,7 @@ export default function UserLayout({
       <UserHeader
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
-        onLogout={onLogout}  // ← truyền xuống thay vì setRole
+        onLogout={onLogout}  
         cartCount={cart.length}
       />
       <main className="flex-1 pt-16">
