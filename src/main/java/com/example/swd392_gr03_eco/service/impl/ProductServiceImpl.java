@@ -50,7 +50,7 @@ public class ProductServiceImpl implements IProductService {
     // --- Read Operations ---
     @Override
     public Page<ProductSummaryDto> getAllProducts(Pageable pageable) {
-        Page<Product> productPage = productRepository.findAll(pageable);
+        Page<Product> productPage = productRepository.findAllByIsActive(true, pageable);
         return productPage.map(this::convertToProductSummaryDto);
     }
 
@@ -94,7 +94,7 @@ public class ProductServiceImpl implements IProductService {
 
     @Override
     public List<ProductDetailDto> getAllProductsAdmin() {
-        return productRepository.findAllByIsActive(true).stream()
+        return productRepository.findAll().stream()
                 .map(this::convertToProductDetailDto)
                 .collect(Collectors.toList());
     }
