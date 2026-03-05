@@ -1,7 +1,7 @@
 // ============================================
 // COMMON TYPES
 // ============================================
-export type UserRole = "guest" | "user" | "admin";
+export type UserRole = "guest" | "user" | "admin" | "staff";
 export type PageType =
   | "home"
   | "products"
@@ -13,14 +13,18 @@ export type PageType =
   | "profile"
   | "login"
   | "register"
-    | "payment-result"
+  | "payment-result"
 
   | "admin-dashboard"
   | "admin-products"
   | "admin-orders"
   | "admin-users"
   | "admin-reviews"
-  | "admin-analytics";
+  | "admin-analytics"
+
+  | "staff-dashboard"
+  | "staff-products"
+  | "staff-orders";
 
 // ============================================
 // AUTH (khớp AuthResponse.java)
