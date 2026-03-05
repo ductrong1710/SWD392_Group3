@@ -223,8 +223,7 @@ export default function App() {
         // ===== KHÔNG override nếu đang là payment return =====
         if (!paymentReturn) {
           if (userRole === "admin") setCurrentPage("admin-dashboard");
-          else if (userRole === "staff")
-            setCurrentPage("staff-dashboard"); // Chuyển trang staff
+          else if (userRole === "staff") setCurrentPage("staff-products"); // Chuyển trang staff
           else setCurrentPage("home");
         }
       } catch {
@@ -254,7 +253,7 @@ export default function App() {
       setRole(userRole);
 
       if (userRole === "admin") setCurrentPage("admin-dashboard");
-      else if (userRole === "staff") setCurrentPage("staff-dashboard");
+      else if (userRole === "staff") setCurrentPage("staff-products");
       else setCurrentPage("home");
 
       // const response = await authApi.login({ email, password });
@@ -382,10 +381,8 @@ export default function App() {
   if (role === "staff") {
     return (
       <StaffLayout
-        role={role}
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
-        setRole={setRole}
         onLogout={handleLogout}
         products={products}
         setProducts={setProducts}

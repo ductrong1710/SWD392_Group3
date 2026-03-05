@@ -1,25 +1,21 @@
 "use client";
 
 import { useEffect } from "react";
+import { Package, ShoppingCart, LogOut } from "lucide-react";
 import type {
   UserRole,
   PageType,
   ProductSummary,
   Order,
-} from "../types"; // ✅ Đã xóa Review và User
+} from "../types";
 
-// Tạm thời dùng chung Header và các component của Admin để đỡ phải code lại
-import AdminTaskbar from "../pages/admin/admin-taskbar"; 
-import AdminHeader from "../component/headers/admin-header";
-import AdminDashboard from "../pages/admin/admin-dashboard";
+// Staff có chức năng CRUD sản phẩm và đơn hàng, nên ta có thể dùng lại component của admin.
 import AdminProducts from "../pages/admin/admin-products";
 import AdminOrders from "../pages/admin/admin-orders";
 import ChatbotWidget from "../component/common/chatbot-widget";
 
-// ✅ 1. Cắt bớt Props: Staff không có users và reviews
+// Props được đơn giản hóa vì staff chỉ quản lý sản phẩm và đơn hàng.
 interface StaffLayoutProps {
-  role: UserRole;
-  setRole: (role: UserRole) => void;
   currentPage: PageType;
   setCurrentPage: (page: PageType) => void;
   onLogout: () => void;
@@ -29,9 +25,16 @@ interface StaffLayoutProps {
   setOrders: (orders: Order[]) => void;
 }
 
+const navItems = [
+  {
+    page: "staff-products" as PageType,
+    label: "Products",
+    icon: Package,
+  },
+  { page: "staff-orders" as PageType, label: "Orders", icon: ShoppingCart },
+];
+
 export default function StaffLayout({
-  role,
-  setRole,
   currentPage,
   setCurrentPage,
   onLogout,
@@ -45,39 +48,44 @@ export default function StaffLayout({
   }, [currentPage]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <AdminHeader onLogout={onLogout} />
-      
-      {/* ⚠️ Lưu ý: Em sẽ cần tạo 1 cái StaffTaskbar riêng, 
-          tạm thời anh để AdminTaskbar truyền role vào nếu nó hỗ trợ */}
-      <AdminTaskbar currentPage={currentPage} setCurrentPage={setCurrentPage} />
-      
-      <main className="flex-1 overflow-auto px-8 py-8">
-        
-        {/* ✅ 2. Sửa lại các điều kiện check PageType cho khớp với Staff */}
-        
-        {currentPage === "staff-dashboard" && (
-          <AdminDashboard
-            products={products}
-            orders={orders}
-            reviews={[]} // Staff không xem được review -> ném mảng rỗng
-            users={[]}   // Staff không xem được user -> ném mảng rỗng
-          />
-        )}
-        
-        {currentPage === "staff-products" && (
-          <AdminProducts products={products} setProducts={setProducts} />
-        )}
-        
-        {currentPage === "staff-orders" && (
-          <AdminOrders orders={orders} setOrders={setOrders} />
-        )}
-        
-        {/* Đã xóa hoàn toàn các tab Reviews, Users, Analytics */}
-        
+    <div className="flex min-h-screen bg-secondary/50">
+      {/* Sidebar */}
+      <aside className="w-64 flex-shrink-0 bg-card border-r border-border p-6 flex flex-col">
+        <h1 className="text-2xl font-bold text-primary mb-10">Staff Panel</h1>
+        <nav className="flex flex-col gap-2">
+          {navItems.map(({ page, label, icon: Icon }) => (
+            <button
+              key={page}
+              onClick={() => setCurrentPage(page)}
+              className={`flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                currentPage === page
+                  ? "bg-primary text-primary-foreground"
+                  : "hover:bg-secondary"
+              }`}
+            >
+              <Icon className="w-5 h-5" />
+              <span>{label}</span>
+            </button>
+          ))}
+        </nav>
+        <div className="mt-auto">
+          <button
+            onClick={onLogout}
+            className="flex w-full items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium hover:bg-secondary text-muted-foreground"
+          >
+            <LogOut className="w-5 h-5" />
+            <span>Logout</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 p-8 overflow-auto">
+        {/* Staff có thể quản lý sản phẩm và đơn hàng, nên ta dùng lại component của admin */}
+        {currentPage === "staff-products" && <AdminProducts products={products} setProducts={setProducts} />}
+        {currentPage === "staff-orders" && <AdminOrders orders={orders} setOrders={setOrders} />}
       </main>
-      
-      {/* Cập nhật role cho Chatbot */}
+
       <ChatbotWidget role="staff" />
     </div>
   );
