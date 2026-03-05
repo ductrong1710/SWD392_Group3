@@ -77,8 +77,10 @@ public class DataSeeder implements CommandLineRunner {
         log.info("Seeding Roles and Users...");
         Role adminRole = getOrSaveRole("ADMIN");
         Role customerRole = getOrSaveRole("CUSTOMER");
+        Role staffRole = getOrSaveRole("STAFF");
         createUserIfNotExist("Main Admin", "admin@example.com", "0901000001", "123 Main St, HCMC", "123456", adminRole);
         createUserIfNotExist("John Doe", "customer@example.com", "0901000003", "789 Nguyen Trai St, HCMC", "123456", customerRole);
+        createUserIfNotExist("Jane Smith", "staff@example.com", "0901000004", "321 Le Loi St, HCMC", "123456", staffRole);
     }
 
     public void seedAllProducts() {
