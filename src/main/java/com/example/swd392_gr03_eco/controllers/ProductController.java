@@ -95,6 +95,18 @@ public class ProductController {
         return ResponseEntity.ok(productService.getAllProductsAdmin());
     }
 
+    @GetMapping("/all/active")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'STAFF')")
+    public ResponseEntity<List<ProductDetailDto>> getAllProductsActive() {
+        return ResponseEntity.ok(productService.getAllProductsActive());
+    }
+    @GetMapping("/all/inactive")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'STAFF')")
+    public ResponseEntity<List<ProductDetailDto>> getAllProductsInActive() {
+        return ResponseEntity.ok(productService.getAllProductsInActive());
+    }
+
+
     @PostMapping
     @PreAuthorize("hasAnyAuthority('ADMIN', 'STAFF')")
     public ResponseEntity<Product> createProduct(@RequestBody ProductCreateRequest request) {

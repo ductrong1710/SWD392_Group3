@@ -54,6 +54,8 @@ public class ProductServiceImpl implements IProductService {
         return productPage.map(this::convertToProductSummaryDto);
     }
 
+
+
     @Override
     public Page<ProductSummaryDto> searchProducts(String keyword, Integer categoryId, String brand, Double minPrice, Double maxPrice, Pageable pageable) {
         Specification<Product> spec = (root, query, cb) -> {
@@ -95,6 +97,19 @@ public class ProductServiceImpl implements IProductService {
     @Override
     public List<ProductDetailDto> getAllProductsAdmin() {
         return productRepository.findAll().stream()
+                .map(this::convertToProductDetailDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<ProductDetailDto> getAllProductsActive() {
+        return productRepository.findAllByIsActive(true).stream()
+                .map(this::convertToProductDetailDto)
+                .collect(Collectors.toList());
+    }
+    @Override
+    public List<ProductDetailDto> getAllProductsInActive() {
+        return productRepository.findAllByIsActive(false).stream()
                 .map(this::convertToProductDetailDto)
                 .collect(Collectors.toList());
     }

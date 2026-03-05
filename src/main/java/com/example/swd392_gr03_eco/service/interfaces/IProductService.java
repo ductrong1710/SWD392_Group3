@@ -20,6 +20,8 @@ public interface IProductService {
 
     // Admin APIs
     List<ProductDetailDto> getAllProductsAdmin();
+    List<ProductDetailDto> getAllProductsActive();
+    List<ProductDetailDto> getAllProductsInActive();
     Product createProduct(ProductCreateRequest request);
     void deleteProduct(Integer id);
     ProductDetailDto updateProduct(Integer id, ProductUpdateRequest request);

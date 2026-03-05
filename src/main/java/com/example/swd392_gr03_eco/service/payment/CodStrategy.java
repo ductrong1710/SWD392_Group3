@@ -11,10 +11,8 @@ public class CodStrategy implements PaymentStrategy {
 
     @Override
     public String createPaymentUrl(Order order, HttpServletRequest request) {
-        // For COD, we don't need an external payment URL.
-        // We can return a success URL directly to our frontend.
-        // The frontend will know that it doesn't need to redirect.
-        return "/checkout-success?orderId=" + order.getId() + "&status=SUCCESS";
+        order.setStatus("AWAITING_PAYMENT");
+        return "/checkout-success?orderId=" + order.getId() + "&status=AWAITING_PAYMENT";
     }
 
     @Override

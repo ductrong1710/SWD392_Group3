@@ -18,6 +18,8 @@ public interface OrderRepository extends JpaRepository<Order, Integer> {
     Optional<Order> findByIdAndUserId(Integer orderId, Integer userId);
     Optional<Order> findByUserIdAndStatus(Integer userId, String status);
 
+    List<Order> findByTrackingAndUpdateAtBefore(String tracking, Instant time);
+
     // --- Dashboard Queries ---
     @Query("SELECT COALESCE(SUM(o.finalAmount), 0) FROM Order o WHERE o.status = 'COMPLETED'")
     BigDecimal findTotalRevenue();
