@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -16,4 +17,7 @@ public interface UserRepository extends JpaRepository<User, Integer> {
     // --- Dashboard Query ---
     @Query("SELECT COUNT(u) FROM User u WHERE u.createdAt >= :since")
     Long countNewUsersSince(Instant since);
+
+    //---Getall---
+    List<User> findAll();
 }

@@ -19,7 +19,7 @@ import java.util.Arrays;
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity
+@EnableMethodSecurity // Keep this to enable @PreAuthorize
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -30,8 +30,8 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(Arrays.asList(
-                "http://localhost:3000",      // Vite dev server
-                "http://localhost:5173",      // Vite default port
+                "http://localhost:3000",
+                "http://localhost:5173",
                 "http://127.0.0.1:3000",
                 "http://127.0.0.1:5173"
         ));
@@ -49,29 +49,31 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))  // ← Thêm dòng này
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         // --- PUBLIC ENDPOINTS ---
                         .requestMatchers(
                                 "/api/v1/auth/**",
                                 "/api/v1/chatbot/**",
-                                "/api/v1/payment/**", // Allow payment callbacks
+                                "/api/v1/payment/**",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**"
                         ).permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/users").permitAll() // Allow user creation
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/products/**",
                                 "/api/v1/categories/**",
                                 "/api/v1/reviews/**"
                         ).permitAll()
 
-                        // --- CUSTOMER ENDPOINTS ---
+                        // --- AUTHENTICATED ENDPOINTS ---
+                        // Let @PreAuthorize handle specific roles for /api/v1/users/**
+                        .requestMatchers("/api/v1/users/**").authenticated()
                         .requestMatchers(
                                 "/api/v1/cart/**",
                                 "/api/v1/checkout/**",
-                                "/api/v1/orders/**",
-                                "/api/v1/user/**"
+                                "/api/v1/orders/**"
                         ).hasAnyAuthority("CUSTOMER", "STAFF", "ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/v1/reviews").hasAnyAuthority("CUSTOMER", "STAFF", "ADMIN")
 
