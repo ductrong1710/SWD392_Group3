@@ -19,6 +19,25 @@ interface UserProductsProps {
   setSelectedProductId: (id: string | null) => void
 }
 
+/**
+ * Parse selectedCategory value:
+ * - "gender:men" → { type: "gender", value: "men" }
+ * - "gender:women" → { type: "gender", value: "women" }
+ * - "5" → { type: "category", value: 5 }
+ * - null → { type: "all" }
+ */
+function parseFilter(selected: string | null): 
+  | { type: "all" }
+  | { type: "gender"; value: "men" | "women" }
+  | { type: "category"; value: number } {
+  if (!selected) return { type: "all" }
+  if (selected.startsWith("gender:")) {
+    const gender = selected.replace("gender:", "") as "men" | "women"
+    return { type: "gender", value: gender }
+  }
+  return { type: "category", value: Number(selected) }
+}
+
 export default function UserProducts({
   products,
   cart,
@@ -35,20 +54,43 @@ export default function UserProducts({
   const [searchValue, setSearchValue] = useState('')
   const [isSearchMode, setIsSearchMode] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [filterLabel, setFilterLabel] = useState<string | null>(null)
   const toast = useToast()
 
   useEffect(() => {
-    loadProducts()
     loadCategories()
   }, [])
 
-  const loadProducts = async () => {
+  useEffect(() => {
+    loadProductsByFilter()
+  }, [selectedCategory])
+
+  const loadProductsByFilter = async () => {
     try {
       setLoading(true)
-      const response = await productsApi.getAll(0, 20)
-      setApiProducts(response.content)
-      setError(null)
       setIsSearchMode(false)
+      const filter = parseFilter(selectedCategory)
+
+      if (filter.type === "gender") {
+        // Use /gender/{gender} API
+        const response = await productsApi.getByGender(filter.value, 0, 20)
+        setApiProducts(response.content)
+        setFilterLabel(filter.value === "men" ? "Men's Fashion" : "Women's Fashion")
+      } else if (filter.type === "category") {
+        // Use /search?categoryId= API
+        const response = await productsApi.search({ categoryId: filter.value })
+        setApiProducts(response.content)
+        // Find category name
+        const found = categories.find((c) => c.id === filter.value)
+        setFilterLabel(found?.name ?? null)
+      } else {
+        // Load all
+        const response = await productsApi.getAll(0, 20)
+        setApiProducts(response.content)
+        setFilterLabel(null)
+      }
+
+      setError(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load products')
       toast.error("Loading failed", "Could not load products")
@@ -69,7 +111,7 @@ export default function UserProducts({
 
   const handleSearch = async () => {
     if (!searchValue.trim()) {
-      loadProducts()
+      setSelectedCategory(null)
       return
     }
 
@@ -101,25 +143,20 @@ export default function UserProducts({
     }
   }
 
-  const handleCategoryClick = async (categoryId: number | null) => {
+  const handleCategoryClick = (categoryId: number | null) => {
     if (categoryId === null) {
       setSelectedCategory(null)
-      loadProducts()
       return
     }
 
-    try {
-      setLoading(true)
+    // Check if this category is a gender category
+    const cat = categories.find((c) => c.id === categoryId)
+    if (cat?.name === "Men's Fashion") {
+      setSelectedCategory("gender:men")
+    } else if (cat?.name === "Women's Fashion") {
+      setSelectedCategory("gender:women")
+    } else {
       setSelectedCategory(String(categoryId))
-      const response = await productsApi.search({ categoryId })
-      setApiProducts(response.content)
-      setIsSearchMode(false)
-      setError(null)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to filter products')
-      toast.error("Filter failed", "Could not filter by category")
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -136,8 +173,22 @@ export default function UserProducts({
   return (
     <div className="max-w-7xl mx-auto px-4 py-12">
       <div className="mb-8">
-        <h2 className="text-3xl font-serif font-semibold mb-2">Shop Products</h2>
-        <p className="text-muted-foreground">Browse and add items to your cart</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-3xl font-serif font-semibold mb-2">
+              {filterLabel ? `${filterLabel} Collection` : "Shop Products"}
+            </h2>
+            <p className="text-muted-foreground">Browse and add items to your cart</p>
+          </div>
+          {selectedCategory && (
+            <button
+              onClick={() => setSelectedCategory(null)}
+              className="px-4 py-2 border border-border rounded-lg hover:bg-secondary transition-colors text-sm font-medium"
+            >
+              ← All Products
+            </button>
+          )}
+        </div>
       </div>
 
       {loading && (
@@ -149,7 +200,7 @@ export default function UserProducts({
       {error && (
         <div className="text-center py-12">
           <p className="text-destructive">Error: {error}</p>
-          <button onClick={loadProducts} className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-lg">
+          <button onClick={loadProductsByFilter} className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-lg">
             Retry
           </button>
         </div>
@@ -158,7 +209,7 @@ export default function UserProducts({
       {!loading && !error && (
         <>
           {/* Category Filter and Search */}
-          <div className="mb-8 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+          <div className="mb-8 flex gap-4 items-center justify-between">
             {/* Category Filter */}
             <div className="flex gap-3 flex-wrap">
               <button
@@ -171,23 +222,35 @@ export default function UserProducts({
               >
                 All
               </button>
-              {categories.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => handleCategoryClick(cat.id)}
-                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                    selectedCategory === String(cat.id)
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-secondary text-foreground hover:bg-secondary/80"
-                  }`}
-                >
-                  {cat.name}
-                </button>
-              ))}
+              {categories.map((cat) => {
+                // Determine if this category button is active
+                let isActive = false
+                if (cat.name === "Men's Fashion") {
+                  isActive = selectedCategory === "gender:men"
+                } else if (cat.name === "Women's Fashion") {
+                  isActive = selectedCategory === "gender:women"
+                } else {
+                  isActive = selectedCategory === String(cat.id)
+                }
+
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => handleCategoryClick(cat.id)}
+                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                      isActive
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-secondary text-foreground hover:bg-secondary/80"
+                    }`}
+                  >
+                    {cat.name}
+                  </button>
+                )
+              })}
             </div>
 
             {/* Search Bar */}
-            <div className="flex gap-2 w-full md:w-auto">
+            <div className="flex gap-2">
               <select
                 value={searchField}
                 onChange={(e) => setSearchField(e.target.value as any)}
@@ -204,7 +267,7 @@ export default function UserProducts({
                 onChange={(e) => setSearchValue(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                 placeholder={`Search by ${searchField}...`}
-                className="px-4 py-2 border border-border rounded-lg text-sm bg-background flex-1 md:w-64"
+                className="px-4 py-2 border border-border rounded-lg text-sm bg-background w-64"
               />
               <button
                 onClick={handleSearch}
@@ -232,7 +295,7 @@ export default function UserProducts({
               <p className="text-muted-foreground text-lg">No products found</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-4 gap-6">
               {displayProducts.map((product) => (
                 <div key={product.id} className="group">
                   <div

@@ -82,6 +82,19 @@ export const fetchProductDetail = async (
 };
 
 // ============================================
+// FETCH PRODUCTS BY GENDER
+// ============================================
+export const fetchProductsByGender = async (
+  gender: "men" | "women",
+  params: { page?: number; size?: number; sort?: string; order?: "asc" | "desc" } = {}
+): Promise<ProductListResponse> => {
+  const { page = 0, size = 12, sort = "id", order = "asc" } = params;
+  return fetchApi(
+    `/v1/products/gender/${gender}?page=${page}&size=${size}&sort=${sort},${order}`
+  );
+};
+
+// ============================================
 // ADMIN PRODUCT CRUD
 // ============================================
 export const productsApi = {
@@ -93,12 +106,19 @@ export const productsApi = {
 
   getById: (id: number): Promise<ProductDetail> => fetchProductDetail(id),
 
+  getByGender: (
+    gender: "men" | "women",
+    page = 0,
+    size = 20
+  ): Promise<ProductListResponse> => fetchProductsByGender(gender, { page, size }),
+
   create: (data: ProductCreateRequest): Promise<ProductDetail> =>
     fetchApi("/v1/products", {
       method: "POST",
       
       body: JSON.stringify(data),
     }),
+    
 
   update: (id: number, data: ProductCreateRequest): Promise<ProductDetail> =>
     fetchApi(`/v1/products/${id}`, {

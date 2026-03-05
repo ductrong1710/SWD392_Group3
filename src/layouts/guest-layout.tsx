@@ -72,7 +72,7 @@ export default function GuestLayout({
           onLogin={() => {
             setRole("user");
             setShowLoginModal(false);
-            setCurrentPage("products");
+            setCurrentPage("login");
           }}
         />
       )}

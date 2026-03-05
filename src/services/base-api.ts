@@ -13,6 +13,8 @@ export const setToken = (token: string): void => {
 
 export const removeToken = (): void => {
   localStorage.removeItem("token");
+  console.log("[removeToken] token after removal:", localStorage.getItem("token")); // phải là null
+
 };
 
 // ============================================
