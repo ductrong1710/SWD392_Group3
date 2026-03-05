@@ -8,8 +8,12 @@ import java.util.List;
 public class ProductCreateRequest {
     private String name;
     private String description;
-    private String brandName; // Added this field
-    private BigDecimal basePrice; // Changed from Double to BigDecimal
+    private String brandName;
+    private BigDecimal basePrice;
+    
+    // Add a list of images to be created with the product
+    private List<ImageRequestDto> images;
+    
     private List<VariantDTO> variants;
 
     @Data
@@ -17,8 +21,8 @@ public class ProductCreateRequest {
         private String sku;
         private String color;
         private String size;
-        private BigDecimal priceOverride; // Changed from Double to BigDecimal
-        private Integer stockQuantity;
         private String material;
+        private BigDecimal priceOverride;
+        private Integer stockQuantity;
     }
 }

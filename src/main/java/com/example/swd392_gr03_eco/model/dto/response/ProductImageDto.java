@@ -7,4 +7,6 @@ public class ProductImageDto {
     private Integer id;
     private String imageUrl;
     private Boolean isThumbnail;
+    private String color;
+
 }

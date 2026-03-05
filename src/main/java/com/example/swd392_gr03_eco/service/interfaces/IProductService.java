@@ -15,14 +15,13 @@ public interface IProductService {
     // Public APIs
     Page<ProductSummaryDto> getAllProducts(Pageable pageable);
     Page<ProductSummaryDto> searchProducts(String keyword, Integer categoryId, String brand, Double minPrice, Double maxPrice, Pageable pageable);
+    Page<ProductSummaryDto> getProductsByGender(String gender, Pageable pageable); // New method
     ProductDetailDto getProductById(Integer id);
 
     // Admin APIs
     List<ProductDetailDto> getAllProductsAdmin();
     Product createProduct(ProductCreateRequest request);
     void deleteProduct(Integer id);
-
-    // --- New Update APIs ---
     ProductDetailDto updateProduct(Integer id, ProductUpdateRequest request);
     ProductDetailDto updateProductStatus(Integer id, ProductUpdateStatusRequest request);
 }

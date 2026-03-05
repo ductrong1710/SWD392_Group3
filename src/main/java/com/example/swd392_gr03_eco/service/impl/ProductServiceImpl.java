@@ -1,12 +1,15 @@
 package com.example.swd392_gr03_eco.service.impl;
 
+import com.example.swd392_gr03_eco.model.dto.request.ImageRequestDto;
 import com.example.swd392_gr03_eco.model.dto.request.ProductCreateRequest;
 import com.example.swd392_gr03_eco.model.dto.request.ProductUpdateRequest;
 import com.example.swd392_gr03_eco.model.dto.request.ProductUpdateStatusRequest;
 import com.example.swd392_gr03_eco.model.dto.response.*;
 import com.example.swd392_gr03_eco.model.entities.*;
 import com.example.swd392_gr03_eco.repositories.CategoryRepository;
+import com.example.swd392_gr03_eco.repositories.ProductImageRepository;
 import com.example.swd392_gr03_eco.repositories.ProductRepository;
+import com.example.swd392_gr03_eco.repositories.ProductVariantRepository;
 import com.example.swd392_gr03_eco.service.interfaces.IAiService;
 import com.example.swd392_gr03_eco.service.interfaces.IProductService;
 import dev.langchain4j.data.embedding.Embedding;
@@ -16,6 +19,7 @@ import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -24,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -37,6 +42,8 @@ public class ProductServiceImpl implements IProductService {
 
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
+    private final ProductVariantRepository productVariantRepository;
+    private final ProductImageRepository productImageRepository;
     private final IAiService aiService;
     private final EmbeddingModel embeddingModel;
 
@@ -64,6 +71,28 @@ public class ProductServiceImpl implements IProductService {
     }
 
     @Override
+    public Page<ProductSummaryDto> getProductsByGender(String gender, Pageable pageable) {
+        String categoryName = "men".equalsIgnoreCase(gender) ? "Men's Fashion" :
+                "women".equalsIgnoreCase(gender) ? "Women's Fashion" : null;
+
+        if (categoryName == null) {
+            return new PageImpl<>(Collections.emptyList(), pageable, 0);
+        }
+
+        return categoryRepository.findByName(categoryName)
+                .map(parentCategory -> {
+                    // 1. Lấy tất cả ID của chính nó và các con/cháu
+                    List<Long> allIds = categoryRepository.findAllSubCategoryIds(parentCategory.getId());
+
+                    // 2. Tìm sản phẩm nằm trong danh sách ID đó
+                    Page<Product> productPage = productRepository.findByCategoryIdIn(allIds, pageable);
+
+                    return productPage.map(this::convertToProductSummaryDto);
+                })
+                .orElse(new PageImpl<>(Collections.emptyList(), pageable, 0));
+    }
+
+    @Override
     public List<ProductDetailDto> getAllProductsAdmin() {
         return productRepository.findAll().stream()
                 .map(this::convertToProductDetailDto)
@@ -76,8 +105,6 @@ public class ProductServiceImpl implements IProductService {
                 .orElseThrow(() -> new EntityNotFoundException("Product not found with id: " + id));
         return convertToProductDetailDto(product);
     }
-
-    // --- Write Operations ---
 
     @Override
     @Transactional
@@ -95,22 +122,45 @@ public class ProductServiceImpl implements IProductService {
                 .isActive(true)
                 .createdAt(Instant.now())
                 .build();
+        
+        // Save product first to get an ID
+        Product savedProduct = productRepository.saveAndFlush(product);
 
+        // --- NEW: Handle Images ---
+        if (request.getImages() != null && !request.getImages().isEmpty()) {
+            List<ProductImage> images = new ArrayList<>();
+            for (ImageRequestDto imgDto : request.getImages()) {
+                images.add(ProductImage.builder()
+                        .product(savedProduct)
+                        .imageUrl(imgDto.getImageUrl())
+                        .isThumbnail(imgDto.getIsThumbnail())
+                        .color(imgDto.getColor())
+                        .build());
+            }
+            productImageRepository.saveAll(images);
+            savedProduct.setProductImages(images);
+        }
+
+        // --- Handle Variants ---
         List<ProductVariant> variants = new ArrayList<>();
-        if (request.getVariants() != null) {
+        if (request.getVariants() != null && !request.getVariants().isEmpty()) {
             for (ProductCreateRequest.VariantDTO dto : request.getVariants()) {
                 variants.add(ProductVariant.builder()
-                        .product(product).sku(dto.getSku()).color(dto.getColor())
-                        .size(dto.getSize()).material(dto.getMaterial())
+                        .product(savedProduct)
+                        .sku(dto.getSku())
+                        .color(dto.getColor())
+                        .size(dto.getSize())
+                        .material(dto.getMaterial())
                         .priceOverride(dto.getPriceOverride())
-                        .stockQuantity(dto.getStockQuantity()).build());
+                        .stockQuantity(dto.getStockQuantity())
+                        .build());
             }
+            savedProduct.setProductVariants(variants);
         }
-        product.setProductVariants(variants);
         
-        updateVectorForProduct(product);
+        updateVectorForProduct(savedProduct);
 
-        return productRepository.save(product);
+        return productRepository.save(savedProduct);
     }
 
     @Override
@@ -173,11 +223,13 @@ public class ProductServiceImpl implements IProductService {
         }
         dto.setCategory(categoryDto);
 
+
         dto.setProductImages(product.getProductImages().stream().map(image -> {
             ProductImageDto imageDto = new ProductImageDto();
             imageDto.setId(image.getId());
             imageDto.setImageUrl(image.getImageUrl());
             imageDto.setIsThumbnail(image.getIsThumbnail());
+            imageDto.setColor(image.getColor());
             return imageDto;
         }).collect(Collectors.toList()));
 
@@ -214,16 +266,16 @@ public class ProductServiceImpl implements IProductService {
 
     private void updateVectorForProduct(Product product) {
         StringBuilder embeddingBuilder = new StringBuilder();
-        embeddingBuilder.append(product.getName()).append(". ");
-        embeddingBuilder.append(product.getDescription()).append(". ");
-        embeddingBuilder.append("Hãng: ").append(product.getBrandName()).append(". ");
+        embeddingBuilder.append("Name: ").append(product.getName()).append(". ");
+        embeddingBuilder.append("Description: ").append(product.getDescription()).append(". ");
+        embeddingBuilder.append("Brand: ").append(product.getBrandName()).append(". ");
 
         if (product.getProductVariants() != null && !product.getProductVariants().isEmpty()) {
             Set<String> colors = product.getProductVariants().stream().map(ProductVariant::getColor).collect(Collectors.toSet());
             Set<String> materials = product.getProductVariants().stream().map(ProductVariant::getMaterial).collect(Collectors.toSet());
 
-            if (!colors.isEmpty()) embeddingBuilder.append("Các màu hiện có: ").append(String.join(", ", colors)).append(". ");
-            if (!materials.isEmpty()) embeddingBuilder.append("Chất liệu: ").append(String.join(", ", materials)).append(". ");
+            if (!colors.isEmpty()) embeddingBuilder.append("Available colors: ").append(String.join(", ", colors)).append(". ");
+            if (!materials.isEmpty()) embeddingBuilder.append("Materials: ").append(String.join(", ", materials)).append(". ");
         }
 
         Embedding embedding = embeddingModel.embed(embeddingBuilder.toString()).content();

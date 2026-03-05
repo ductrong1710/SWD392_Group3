@@ -24,9 +24,13 @@ public class ProductImage {
     @JsonBackReference("product-images")
     private Product product;
 
-    @Column(name = "image_url")
+    @Column(name = "image_url", columnDefinition = "TEXT")
     private String imageUrl;
 
     @Column(name = "is_thumbnail")
     private Boolean isThumbnail;
+
+    // This field links the image to a specific color variant.
+    @Column(name = "color")
+    private String color;
 }

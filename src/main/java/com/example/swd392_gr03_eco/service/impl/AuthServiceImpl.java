@@ -16,7 +16,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant; // Import Instant
+import java.time.Instant;
 
 @Service
 @RequiredArgsConstructor
@@ -43,7 +43,7 @@ public class AuthServiceImpl implements IAuthService {
                 .email(request.getEmail())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .phone(request.getPhone())
-                .createdAt(Instant.now()) // Use Instant.now()
+                .createdAt(Instant.now())
                 .isActive(true)
                 .role(customerRole)
                 .build();
@@ -51,7 +51,10 @@ public class AuthServiceImpl implements IAuthService {
         User savedUser = userRepository.save(user);
 
         String jwtToken = jwtService.generateToken(savedUser);
-        return AuthResponse.builder().token(jwtToken).build();
+        return AuthResponse.builder()
+                .token(jwtToken)
+                .role(savedUser.getRole().getRoleName()) // Add role to response
+                .build();
     }
 
     @Override
@@ -66,6 +69,9 @@ public class AuthServiceImpl implements IAuthService {
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         String jwtToken = jwtService.generateToken(user);
-        return AuthResponse.builder().token(jwtToken).build();
+        return AuthResponse.builder()
+                .token(jwtToken)
+                .role(user.getRole().getRoleName()) // Add role to response
+                .build();
     }
 }

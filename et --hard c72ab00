@@ -1,0 +1,24 @@
+[33mbf5fa2e[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mlong[m[33m, [m[1;31morigin/long[m[33m)[m add logout
+[33mc72ab00[m add url image when create product
+[33mc62eb4e[m change url image product
+[33m0879ae4[m fix dataseeder
+[33mbdbf008[m add more products
+[33m41d8bf3[m fix checkout
+[33m95e836a[m fix checkout
+[33mf1d74ca[m add role in login api response and change url fe callback when checkout success
+[33mb595e01[m fix checkout change $ to vnd
+[33m96dff8a[m change chatbot and dataseeder to Eng
+[33m549e37f[m add put product delete and patch status of product
+[33m4f2a640[m fix loop error in class getAllProducts and getProductById
+[33mb59c6e9[m fix getAllProducts do not have imange
+[33ma2213c5[m Merge branch 'long' of https://github.com/ductrong1710/SWD392_Group3 into long
+[33md1cff57[m fix link images product in data seeder
+[33m9129b29[m add CROS
+[33mfd2ccd4[m main flow report and change dataseeder
+[33m6aefc81[m fix RAG for AI
+[33m492f96a[m change database (postgres) use pgvector for ai search
+[33m2f6010e[m change all code to fit erd and mainflow done flow add to cart and check out by vnpay
+[33m0544d9e[m change main flows
+[33m90ca565[m fix access function,add some data into dataseeder
+[33me58bf3d[m fix access function
+[33me00b896[m code base, need to test
