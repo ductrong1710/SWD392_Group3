@@ -18,7 +18,7 @@ public interface ProductRepository extends JpaRepository<Product, Integer>, JpaS
     // Method to find a product by its exact name
     Optional<Product> findByName(String name);
 
-    @Query(value = "SELECT * FROM products ORDER BY vector_embedding <-> CAST(:embedding AS vector) LIMIT :limit", nativeQuery = true)
+    @Query(value = "SELECT * FROM products WHERE is_active = true ORDER BY vector_embedding <-> CAST(:embedding AS vector) LIMIT :limit", nativeQuery = true)
     List<Product> findNearestNeighbors(@Param("embedding") String embedding, @Param("limit") int limit);
 
     @Query("SELECT p FROM Product p WHERE p.category.parent.id = :parentCategoryId AND p.isActive = true")
