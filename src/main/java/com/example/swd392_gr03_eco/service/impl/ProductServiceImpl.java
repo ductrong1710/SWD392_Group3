@@ -94,7 +94,7 @@ public class ProductServiceImpl implements IProductService {
 
     @Override
     public List<ProductDetailDto> getAllProductsAdmin() {
-        return productRepository.findAll().stream()
+        return productRepository.findAllByIsActive(true).stream()
                 .map(this::convertToProductDetailDto)
                 .collect(Collectors.toList());
     }
