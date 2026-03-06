@@ -15,6 +15,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
@@ -39,7 +41,7 @@ public class DataSeeder implements CommandLineRunner {
     private final PasswordEncoder passwordEncoder;
     private final ObjectMapper objectMapper;
     private final EmbeddingModel embeddingModel;
-    //</editor-fold>
+    private final Random random = new Random();
 
     //<editor-fold desc="Data for Random Generation">
     private static final List<String> ADJECTIVES = List.of("Vintage", "Modern", "Classic", "Oversized", "Slim-Fit", "Relaxed", "Graphic", "Minimalist", "Heavyweight", "Lightweight", "Washed", "Distressed");
@@ -70,6 +72,7 @@ public class DataSeeder implements CommandLineRunner {
         seedCoreData();
         seedAllProducts();
         seedSampleOrders();
+        seedOrders();
         log.info(">>> DATA SEEDING FINISHED SUCCESSFULLY <<<");
     }
 
@@ -151,6 +154,78 @@ public class DataSeeder implements CommandLineRunner {
 
             updateProductWithVector(product, variants);
         }
+    }
+    public void seedOrders() {
+        // Only seed if there are no completed orders
+        if (orderRepository.count() > 15) {
+            System.out.println("Order data already exists. Skipping seeding.");
+            return;
+        }
+
+        User customer = userRepository.findByEmail("customer@example.com").orElse(null);
+        List<ProductVariant> variants = productVariantRepository.findAll();
+
+        if (customer == null || variants.isEmpty()) {
+            System.out.println("Cannot seed orders without a customer or product variants.");
+            return;
+        }
+
+        System.out.println("Seeding Orders...");
+        ZonedDateTime now = ZonedDateTime.now(ZoneId.of("UTC"));
+
+        // Orders for today
+        createAndSaveOrder(customer, variants, "COMPLETED", now.toInstant());
+        createAndSaveOrder(customer, variants, "COMPLETED", now.minusHours(3).toInstant());
+
+        // Orders for this week
+        createAndSaveOrder(customer, variants, "COMPLETED", now.minusDays(2).toInstant());
+        createAndSaveOrder(customer, variants, "PROCESSING", now.minusDays(1).toInstant()); // Not completed
+
+        // Orders for this month
+        createAndSaveOrder(customer, variants, "COMPLETED", now.minusWeeks(2).toInstant());
+        createAndSaveOrder(customer, variants, "COMPLETED", now.minusWeeks(1).toInstant());
+
+        // Orders for last month
+        createAndSaveOrder(customer, variants, "COMPLETED", now.minusMonths(1).withDayOfMonth(5).toInstant());
+        createAndSaveOrder(customer, variants, "COMPLETED", now.minusMonths(1).withDayOfMonth(20).toInstant());
+
+        // Orders for this year
+        createAndSaveOrder(customer, variants, "COMPLETED", now.minusMonths(3).toInstant());
+
+        // Orders for last year
+        createAndSaveOrder(customer, variants, "COMPLETED", now.minusYears(1).plusMonths(1).toInstant());
+
+        System.out.println("Finished seeding Orders.");
+    }
+
+    private void createAndSaveOrder(User user, List<ProductVariant> variants, String status, Instant createdAt) {
+        ProductVariant variant = variants.get(random.nextInt(variants.size()));
+        int quantity = random.nextInt(3) + 1;
+        BigDecimal price = variant.getProduct().getBasePrice();
+        BigDecimal totalAmount = price.multiply(BigDecimal.valueOf(quantity));
+
+        Order order = Order.builder()
+                .user(user)
+                .totalAmount(totalAmount)
+                .discountAmount(BigDecimal.ZERO)
+                .finalAmount(totalAmount)
+                .status(status)
+                .tracking("COMPLETED") // Assume all seeded orders are tracked as completed
+                .shippingAddressJson("{\\\"fullName\\\":\\\"Test User\\\",\\\"phone\\\":\\\"123456789\\\"}")
+                .createdAt(createdAt)
+                .updateAt(createdAt)
+                .build();
+
+        Order savedOrder = orderRepository.save(order);
+
+        OrderItem orderItem = OrderItem.builder()
+                .order(savedOrder)
+                .productVariant(variant)
+                .quantity(quantity)
+                .priceAtPurchase(price)
+                .build();
+
+        orderItemRepository.save(orderItem);
     }
 
     //<editor-fold desc="Helper Methods">

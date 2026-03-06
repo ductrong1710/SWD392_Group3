@@ -55,7 +55,6 @@ public class ProductServiceImpl implements IProductService {
     }
 
 
-
     @Override
     public Page<ProductSummaryDto> searchProducts(String keyword, Integer categoryId, String brand, Double minPrice, Double maxPrice, Pageable pageable) {
         Specification<Product> spec = (root, query, cb) -> {
@@ -64,8 +63,10 @@ public class ProductServiceImpl implements IProductService {
             if (keyword != null && !keyword.isEmpty()) predicates.add(cb.like(root.get("name"), "%" + keyword + "%"));
             if (categoryId != null) predicates.add(cb.equal(root.get("category").get("id"), categoryId));
             if (brand != null && !brand.isEmpty()) predicates.add(cb.equal(root.get("brandName"), brand));
-            if (minPrice != null) predicates.add(cb.greaterThanOrEqualTo(root.get("basePrice"), BigDecimal.valueOf(minPrice)));
-            if (maxPrice != null) predicates.add(cb.lessThanOrEqualTo(root.get("basePrice"), BigDecimal.valueOf(maxPrice)));
+            if (minPrice != null)
+                predicates.add(cb.greaterThanOrEqualTo(root.get("basePrice"), BigDecimal.valueOf(minPrice)));
+            if (maxPrice != null)
+                predicates.add(cb.lessThanOrEqualTo(root.get("basePrice"), BigDecimal.valueOf(maxPrice)));
             return cb.and(predicates.toArray(new Predicate[0]));
         };
         Page<Product> productPage = productRepository.findAll(spec, pageable);
@@ -107,6 +108,7 @@ public class ProductServiceImpl implements IProductService {
                 .map(this::convertToProductDetailDto)
                 .collect(Collectors.toList());
     }
+
     @Override
     public List<ProductDetailDto> getAllProductsInActive() {
         return productRepository.findAllByIsActive(false).stream()
@@ -118,6 +120,13 @@ public class ProductServiceImpl implements IProductService {
     public ProductDetailDto getProductById(Integer id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Product not found with id: " + id));
+        return convertToProductDetailDto(product);
+    }
+
+    @Override
+    public ProductDetailDto getProductByName(String name) {
+        Product product = productRepository.findByName(name)
+                .orElseThrow(() -> new EntityNotFoundException("Product not found with name: " + name));
         return convertToProductDetailDto(product);
     }
 
@@ -137,7 +146,7 @@ public class ProductServiceImpl implements IProductService {
                 .isActive(true)
                 .createdAt(Instant.now())
                 .build();
-        
+
         // Save product first to get an ID
         Product savedProduct = productRepository.saveAndFlush(product);
 
@@ -172,7 +181,7 @@ public class ProductServiceImpl implements IProductService {
             }
             savedProduct.setProductVariants(variants);
         }
-        
+
         updateVectorForProduct(savedProduct);
 
         return productRepository.save(savedProduct);
@@ -289,15 +298,17 @@ public class ProductServiceImpl implements IProductService {
             Set<String> colors = product.getProductVariants().stream().map(ProductVariant::getColor).collect(Collectors.toSet());
             Set<String> materials = product.getProductVariants().stream().map(ProductVariant::getMaterial).collect(Collectors.toSet());
 
-            if (!colors.isEmpty()) embeddingBuilder.append("Available colors: ").append(String.join(", ", colors)).append(". ");
-            if (!materials.isEmpty()) embeddingBuilder.append("Materials: ").append(String.join(", ", materials)).append(". ");
+            if (!colors.isEmpty())
+                embeddingBuilder.append("Available colors: ").append(String.join(", ", colors)).append(". ");
+            if (!materials.isEmpty())
+                embeddingBuilder.append("Materials: ").append(String.join(", ", materials)).append(". ");
         }
 
         Embedding embedding = embeddingModel.embed(embeddingBuilder.toString()).content();
         float[] vector = embedding.vector();
         String vectorString = IntStream.range(0, vector.length)
-                                     .mapToObj(i -> String.valueOf(vector[i]))
-                                     .collect(Collectors.joining(",", "[", "]"));
+                .mapToObj(i -> String.valueOf(vector[i]))
+                .collect(Collectors.joining(",", "[", "]"));
         product.setVectorEmbedding(vectorString);
     }
 }

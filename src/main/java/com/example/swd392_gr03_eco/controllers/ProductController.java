@@ -87,6 +87,11 @@ public class ProductController {
         return ResponseEntity.ok(productService.getProductById(id));
     }
 
+    @GetMapping("/{name}")
+    public ResponseEntity<ProductDetailDto> getProductByName(@PathVariable String name) {
+        return ResponseEntity.ok(productService.getProductByName(name));
+    }
+
     // --- Admin/Staff APIs ---
 
     @GetMapping("/all")

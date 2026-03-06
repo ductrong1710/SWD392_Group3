@@ -78,6 +78,7 @@ public class OrderTrackingServiceImpl implements IOrderTrackingService {
             if (Objects.equals(currentTracking, DELIVERED)) {
                 if (COMPLETED.equalsIgnoreCase(newTracking) || NOT_RECEIVED.equalsIgnoreCase(newTracking)) {
                     order.setTracking(newTracking);
+                    order.setStatus("COMPLETED");
                 } else {
                     throw new IllegalArgumentException("Invalid confirmation status: " + newTracking);
                 }
