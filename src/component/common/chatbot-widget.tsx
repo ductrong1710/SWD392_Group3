@@ -21,6 +21,65 @@ export default function ChatbotWidget({ role = "guest" }: ChatbotWidgetProps) {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
+  // === HÀM XỬ LÝ TEXT THÀNH LINK (NEW) ===
+  const renderMessage = (text: string) => {
+    // Regex bắt 2 trường hợp: 
+    // 1. Markdown link: [Tên sản phẩm](/link) 
+    // 2. Raw URL: https://google.com
+    const regex = /\[([^\]]+)\]\(([^)]+)\)|(https?:\/\/[^\s]+)/g;
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = regex.exec(text)) !== null) {
+      // Đẩy phần chữ bình thường (trước link) vào mảng
+      if (match.index > lastIndex) {
+        parts.push(text.substring(lastIndex, match.index));
+      }
+
+      if (match[3]) {
+        // Xử lý khi AI trả về Link thô (Raw URL)
+        parts.push(
+          <a
+            key={match.index}
+            href={match[3]}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-indigo-300 underline hover:text-indigo-400 font-medium transition-colors"
+          >
+            {match[3]}
+          </a>
+        );
+      } else {
+        // Xử lý khi AI trả về Link Markdown: [Tên hiển thị](URL)
+        const linkText = match[1];
+        const linkUrl = match[2];
+        
+        parts.push(
+          <a
+            key={match.index}
+            href={linkUrl}
+            // Nếu link bắt đầu bằng http thì mở tab mới, nếu link nội bộ (VD: /products/1) thì mở tab hiện tại
+            target={linkUrl.startsWith("http") ? "_blank" : "_self"}
+            rel={linkUrl.startsWith("http") ? "noopener noreferrer" : ""}
+            className="text-blue-600 underline hover:text-blue-800 font-semibold transition-colors dark:text-blue-400"
+          >
+            {linkText}
+          </a>
+        );
+      }
+      lastIndex = regex.lastIndex;
+    }
+
+    // Đẩy phần chữ còn lại (sau link cuối) vào mảng
+    if (lastIndex < text.length) {
+      parts.push(text.substring(lastIndex));
+    }
+
+    // Nếu không có link nào thì trả về text gốc, có thì trả về mảng React Node
+    return parts.length > 0 ? parts : text;
+  };
+
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
@@ -108,7 +167,10 @@ export default function ChatbotWidget({ role = "guest" }: ChatbotWidgetProps) {
                       : "bg-secondary text-foreground"
                   }`}
                 >
-                  <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                  {/* SỬ DỤNG renderMessage(msg.content) Ở ĐÂY */}
+                  <p className="text-sm whitespace-pre-wrap leading-relaxed">
+                    {renderMessage(msg.content)}
+                  </p>
                 </div>
               </div>
             ))}

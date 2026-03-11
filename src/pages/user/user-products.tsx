@@ -44,11 +44,12 @@ export default function UserProducts({
   setCart,
   selectedCategory,
   setSelectedCategory,
+  selectedProductId, 
+  setSelectedProductId,
 }: UserProductsProps) {
   const [apiProducts, setApiProducts] = useState<ProductSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [selectedProductId, setSelectedProductId] = useState<number | null>(null)
   const [categories, setCategories] = useState<Category[]>([])
   const [searchField, setSearchField] = useState<'keyword' | 'brand' | 'minPrice' | 'maxPrice'>('keyword')
   const [searchValue, setSearchValue] = useState('')
@@ -163,7 +164,7 @@ export default function UserProducts({
   const displayProducts = apiProducts
 
   const handleProductClick = (productId: number) => {
-    setSelectedProductId(productId)
+    setSelectedProductId(String(productId)) 
   }
 
   const handleCloseDetail = () => {
@@ -352,10 +353,9 @@ export default function UserProducts({
       {/* Product Detail Popup */}
       {selectedProductId && (
         <UserProductDetail
-          productId={selectedProductId}
+          productId={Number(selectedProductId)} 
           onClose={handleCloseDetail}
           onAddToCart={() => {
-            // Refresh cart
           }}
         />
       )}
