@@ -116,10 +116,10 @@ public class ChatbotServiceImpl implements IChatbotService {
                         Link: [View Product](product_url)
                 
                         Example:
-                        **Sony WH-1000XM5**
+                        **Sony WH-1000XM5 is id 1**
                         Price: $399
                         Description: Premium noise cancelling headphones.
-                        Link: [View Product](http://localhost:5173/api/v1/products/name/sony-wh1000xm5)
+                        Link: [View Product](http://localhost:3000/#/products/product/1)
                 """.formatted(productContext);
 
         List<AiRequest.Message> messages = new ArrayList<>();
