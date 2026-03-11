@@ -54,8 +54,8 @@ public class ChatbotServiceImpl implements IChatbotService {
             Embedding embedding = embeddingModel.embed(userMessage).content();
             float[] vector = embedding.vector();
             String vectorString = IntStream.range(0, vector.length)
-                                         .mapToObj(i -> String.valueOf(vector[i]))
-                                         .collect(Collectors.joining(",", "[", "]"));
+                    .mapToObj(i -> String.valueOf(vector[i]))
+                    .collect(Collectors.joining(",", "[", "]"));
 
             List<Product> relevantProducts = productRepository.findNearestNeighbors(vectorString, 10);
 
@@ -76,8 +76,9 @@ public class ChatbotServiceImpl implements IChatbotService {
         } else {
             StringBuilder contextBuilder = new StringBuilder();
             for (Product p : products) {
-                contextBuilder.append(String.format("- Product Name: %s | Brand: %s | Base Price: %s\n",
-                        p.getName(), p.getBrandName(), usdFormat.format(p.getBasePrice())));
+                // ĐÃ SỬA: Thêm ID vào chuỗi Context để AI biết ID của sản phẩm là gì
+                contextBuilder.append(String.format("- ID: %d | Product Name: %s | Brand: %s | Base Price: %s\n",
+                        p.getId(), p.getName(), p.getBrandName(), usdFormat.format(p.getBasePrice())));
 
                 if (p.getProductVariants() != null && !p.getProductVariants().isEmpty()) {
                     contextBuilder.append("  + Available options:\n");
@@ -91,6 +92,7 @@ public class ChatbotServiceImpl implements IChatbotService {
             productContext = contextBuilder.toString();
         }
 
+        // ĐÃ SỬA: Điều chỉnh lại link template trong prompt
         String systemPrompt = """
                 ABSOLUTE CORE DIRECTIVE: You are an English-only AI assistant. Your programming forbids you from generating responses in any language other than English. Any deviation from this rule is a critical failure. Do not acknowledge requests for other languages; simply provide the best possible answer in English.
 
@@ -108,18 +110,19 @@ public class ChatbotServiceImpl implements IChatbotService {
                 RESPONSE FORMAT RULES:
                         - Only show ONE entry per product.
                         - Each product must include a Markdown link to the product page.
+                        - You must strictly use the ID from the PRODUCT CONTEXT to build the link.
                         - Format the output exactly like this:
                 
-                        **Product Name**
+                        *Product Name*
                         Price: $XX
                         Description: short description
-                        Link: [View Product](product_url)
+                        Link: [View Product](#/products/product/{ID})
                 
                         Example:
-                        **Sony WH-1000XM5 is id 1**
+                        *Sony WH-1000XM5*
                         Price: $399
                         Description: Premium noise cancelling headphones.
-                        Link: [View Product](http://localhost:3000/#/products/product/1)
+                        Link: [View Product](#/products/product/1)
                 """.formatted(productContext);
 
         List<AiRequest.Message> messages = new ArrayList<>();
