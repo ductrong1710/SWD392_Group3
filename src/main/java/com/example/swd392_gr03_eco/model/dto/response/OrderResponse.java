@@ -13,6 +13,7 @@ import java.util.List;
 public class OrderResponse {
     private Integer orderId;
     private String status;
+    private String tracking;
     private Instant orderDate; // Change to Instant
     private CheckoutRequest.AddressInfo shippingAddress;
     private List<OrderItemResponse> items;

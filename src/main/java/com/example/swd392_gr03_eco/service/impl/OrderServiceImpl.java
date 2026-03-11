@@ -86,6 +86,7 @@ public class OrderServiceImpl implements IOrderService {
         return OrderResponse.builder()
                 .orderId(order.getId())
                 .status(order.getStatus())
+                .tracking(order.getTracking())
                 .orderDate(order.getCreatedAt())
                 .shippingAddress(parseShippingAddress(order.getShippingAddressJson()))
                 .items(itemResponses)

@@ -40,8 +40,7 @@ public class OrderTrackingServiceImpl implements IOrderTrackingService {
         String userRole = currentUser.getRole().getRoleName();
 
         // Rule for Staff
-        if ("STAFF".equalsIgnoreCase(userRole)) {
-            switch (newTracking) {
+        if ("STAFF".equalsIgnoreCase(userRole) || "ADMIN".equalsIgnoreCase(userRole)) {            switch (newTracking) {
                 case PREPARING:
                     boolean isCodAwaiting = "AWAITING_PAYMENT".equalsIgnoreCase(paymentStatus) && "COD".equalsIgnoreCase(paymentMethod);
                     boolean isVnpayCompleted = "COMPLETED".equalsIgnoreCase(paymentStatus) && "VNPAY".equalsIgnoreCase(paymentMethod);
