@@ -42,6 +42,16 @@ export async function fetchApi<T>(
     throw new Error(error || `HTTP error! status: ${response.status}`);
   }
 
-  const text = await response.text();
-  return text ? JSON.parse(text) : null;
+  const contentType = response.headers.get("content-type");
+  const contentLength = response.headers.get("content-length");
+
+  if (
+    response.status === 204 ||
+    contentLength === "0" ||
+    !contentType?.includes("application/json")
+  ) {
+    return undefined as T;
+  }
+
+  return response.json();
 }

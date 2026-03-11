@@ -10,6 +10,7 @@ import StaffLayout from "./layouts/staff-layout";
 import PaymentResult from "./pages/user/payment-result";
 import { setToken, getToken, removeToken } from "./services/base-api";
 import { authApi } from "./services/auth-api";
+import type { OrderResponseDto } from "./services/order-api"; 
 import type {
   UserRole,
   PageType,
@@ -131,7 +132,7 @@ export default function App() {
   });
 
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<OrderResponseDto[]>([]);  
   const [products, setProducts] = useState<ProductSummary[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -303,9 +304,7 @@ export default function App() {
 
   // Handle logout
   const handleLogout = () => {
-    console.log("[logout] token BEFORE:", localStorage.getItem("token")); // phải có token
     removeToken();
-    console.log("[logout] token AFTER:", localStorage.getItem("token"));  // phải là null
     localStorage.removeItem("userRole");
     localStorage.removeItem("role");
     setRole("guest");
@@ -320,7 +319,7 @@ export default function App() {
       <PaymentResult
         setCurrentPage={setCurrentPage}
         setCart={setCart}
-        setOrders={setOrders}
+        setOrders={setOrders as any}
         setSelectedOrderId={setSelectedOrderId}
       />
     );
@@ -347,7 +346,7 @@ export default function App() {
   }
 
   if (role === "admin") {
-    return (
+  return (
       <AdminLayout
         role={role}
         currentPage={currentPage}
@@ -356,8 +355,8 @@ export default function App() {
         onLogout={handleLogout}
         products={products}
         setProducts={setProducts}
-        orders={orders}
-        setOrders={setOrders}
+        orders={orders as any}
+        setOrders={setOrders as any}
         reviews={reviews}
         setReviews={setReviews}
         users={users}
@@ -368,15 +367,15 @@ export default function App() {
 
   if (role === "user") {
     return (
-      <UserLayout
+   <UserLayout
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
         setRole={setRole}
         onLogout={handleLogout}
         cart={cart}
         setCart={setCart}
-        orders={orders}
-        setOrders={setOrders}
+        orders={orders as any}
+        setOrders={setOrders as any}
         products={products}
         selectedCategory={selectedCategory}
         setSelectedCategory={setSelectedCategory}
@@ -391,14 +390,14 @@ export default function App() {
   
   if (role === "staff") {
     return (
-      <StaffLayout
+          <StaffLayout
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
         onLogout={handleLogout}
         products={products}
         setProducts={setProducts}
-        orders={orders}
-        setOrders={setOrders}
+        orders={orders as any}
+        setOrders={setOrders as any}
       />
     );
   }

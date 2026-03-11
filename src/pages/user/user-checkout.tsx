@@ -3,14 +3,14 @@
 import { useState, Dispatch, SetStateAction } from "react";
 import { ChevronRight } from "lucide-react";
 import { checkoutApi } from "../../services/checkout-api";
-import { ordersApi } from "../../services/order-api";
 import { useToast } from "../../contexts/ToastContext";
-import type { CartItem, Order, PageType } from "../../types";
+import type { CartItem, PageType } from "../../types";
+import type { OrderResponseDto } from "../../services/order-api";
 
 interface UserCheckoutProps {
   cart: CartItem[];
   setCart: (cart: CartItem[]) => void;
-  setOrders: (orders: Order[]) => void;
+  setOrders: (orders: OrderResponseDto[]) => void;  // ← đổi Order[] thành OrderResponseDto[]
   setCurrentPage: Dispatch<SetStateAction<PageType>>;
 }
 
@@ -27,7 +27,7 @@ export default function UserCheckout({
     phone: "",
     addressLine: "",
     city: "",
-    paymentMethod: "VNPAY" as "VNPAY" | "COD",
+    paymentMethod: "VNPAY" as "VNPAY",  // ← chỉ VNPAY
   });
   const toast = useToast();
 
@@ -44,7 +44,7 @@ export default function UserCheckout({
 
     if (step === 1) {
       setStep(2);
-      toast.info("Step 2", "Please select your payment method");
+      toast.info("Step 2", "Please confirm your order");
       return;
     }
 
@@ -57,22 +57,18 @@ export default function UserCheckout({
           addressLine: formData.addressLine,
           city: formData.city,
         },
-        paymentMethod: formData.paymentMethod,
+        paymentMethod: "VNPAY",
       });
 
       // VNPAY: redirect sang payment gateway
-      // Sau khi thanh toán, VNPAY sẽ redirect về /payment-result?vnp_ResponseCode=...
-      // App.tsx sẽ detect và render PaymentResult component
       if (response.paymentUrl) {
         toast.info("Redirecting", "Redirecting to VNPay payment gateway...");
         window.location.href = response.paymentUrl;
         return;
       }
 
-      // COD: xử lý trực tiếp
+      // Fallback nếu không có paymentUrl
       setCart([]);
-      const updatedOrders = await ordersApi.getMyOrders();
-      setOrders(updatedOrders);
       toast.success("Order placed!", "Your order has been placed successfully");
       setCurrentPage("orders");
     } catch (error) {
@@ -90,19 +86,15 @@ export default function UserCheckout({
         <div className="lg:col-span-2">
           {/* Steps */}
           <div className="flex items-center gap-4 mb-12">
-            <div
-              className={`flex items-center justify-center w-10 h-10 rounded-full font-semibold transition-colors ${
-                step >= 1 ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
-              }`}
-            >
+            <div className={`flex items-center justify-center w-10 h-10 rounded-full font-semibold transition-colors ${
+              step >= 1 ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
+            }`}>
               1
             </div>
             <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            <div
-              className={`flex items-center justify-center w-10 h-10 rounded-full font-semibold transition-colors ${
-                step >= 2 ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
-              }`}
-            >
+            <div className={`flex items-center justify-center w-10 h-10 rounded-full font-semibold transition-colors ${
+              step >= 2 ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
+            }`}>
               2
             </div>
           </div>
@@ -113,28 +105,28 @@ export default function UserCheckout({
               <h3 className="text-xl font-semibold mb-6">Shipping Address</h3>
               <input
                 type="text"
-                placeholder="Full Name"
+                placeholder="Full Name *"
                 value={formData.fullName}
                 onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                 className="w-full px-4 py-2 border border-border rounded-lg bg-background"
               />
               <input
                 type="tel"
-                placeholder="Phone Number"
+                placeholder="Phone Number *"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 className="w-full px-4 py-2 border border-border rounded-lg bg-background"
               />
               <input
                 type="text"
-                placeholder="Address Line"
+                placeholder="Address Line *"
                 value={formData.addressLine}
                 onChange={(e) => setFormData({ ...formData, addressLine: e.target.value })}
                 className="w-full px-4 py-2 border border-border rounded-lg bg-background"
               />
               <input
                 type="text"
-                placeholder="City"
+                placeholder="City *"
                 value={formData.city}
                 onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                 className="w-full px-4 py-2 border border-border rounded-lg bg-background"
@@ -142,41 +134,35 @@ export default function UserCheckout({
             </div>
           )}
 
-          {/* Step 2: Payment Method */}
+          {/* Step 2: Confirm + Payment */}
           {step === 2 && (
             <div className="space-y-4">
-              <h3 className="text-xl font-semibold mb-6">Payment Method</h3>
-              {(["VNPAY", "COD"] as const).map((method) => (
-                <label
-                  key={method}
-                  className={`flex items-center gap-3 p-4 border rounded-lg cursor-pointer hover:bg-secondary transition-colors ${
-                    formData.paymentMethod === method
-                      ? "border-primary bg-primary/5"
-                      : "border-border"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="payment"
-                    value={method}
-                    checked={formData.paymentMethod === method}
-                    onChange={(e) =>
-                      setFormData({ ...formData, paymentMethod: e.target.value as "VNPAY" | "COD" })
-                    }
-                    className="w-4 h-4"
-                  />
-                  <div>
-                    <span className="font-medium">
-                      {method === "VNPAY" ? "VNPay" : "Cash on Delivery"}
-                    </span>
-                    <p className="text-sm text-muted-foreground">
-                      {method === "VNPAY"
-                        ? "Pay securely via VNPay gateway"
-                        : "Pay when you receive your order"}
-                    </p>
-                  </div>
-                </label>
-              ))}
+              <h3 className="text-xl font-semibold mb-6">Confirm Order</h3>
+
+              {/* Shipping summary */}
+              <div className="bg-secondary rounded-lg p-4 space-y-2 text-sm">
+                <p className="font-medium mb-2">Shipping Address</p>
+                <p>{formData.fullName} — {formData.phone}</p>
+                <p>{formData.addressLine}, {formData.city}</p>
+              </div>
+
+              {/* Payment method — chỉ VNPAY */}
+              <div className="flex items-center gap-3 p-4 border border-primary bg-primary/5 rounded-lg">
+                <input
+                  type="radio"
+                  name="payment"
+                  value="VNPAY"
+                  checked
+                  readOnly
+                  className="w-4 h-4"
+                />
+                <div>
+                  <span className="font-medium">VNPay</span>
+                  <p className="text-sm text-muted-foreground">
+                    Pay securely via VNPay gateway
+                  </p>
+                </div>
+              </div>
             </div>
           )}
 
@@ -194,7 +180,11 @@ export default function UserCheckout({
               disabled={isSubmitting}
               className="flex-1 px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors font-medium disabled:opacity-50"
             >
-              {isSubmitting ? "Processing..." : step === 1 ? "Continue to Payment" : "Place Order"}
+              {isSubmitting
+                ? "Processing..."
+                : step === 1
+                ? "Continue"
+                : "Pay with VNPay"}
             </button>
           </div>
         </div>
@@ -212,7 +202,7 @@ export default function UserCheckout({
                   </div>
                   <div className="flex justify-between text-muted-foreground text-xs">
                     <span>{item.color} / {item.size}</span>
-                    <span>${(item.price * item.quantity).toFixed(2)}</span>
+                    <span>{(item.price * item.quantity).toLocaleString("vi-VN")}₫</span>
                   </div>
                 </div>
               ))}
@@ -220,20 +210,20 @@ export default function UserCheckout({
             <div className="space-y-3 mb-6 pb-6 border-b border-border">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Subtotal</span>
-                <span>${total.toFixed(2)}</span>
+                <span>{total.toLocaleString("vi-VN")}₫</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Shipping</span>
-                <span>${shipping.toFixed(2)}</span>
+                <span>{shipping.toLocaleString("vi-VN")}₫</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Tax</span>
-                <span>${tax.toFixed(2)}</span>
+                <span className="text-muted-foreground">Tax (10%)</span>
+                <span>{tax.toLocaleString("vi-VN")}₫</span>
               </div>
             </div>
             <div className="flex justify-between font-semibold text-lg">
               <span>Total</span>
-              <span>${grandTotal.toFixed(2)}</span>
+              <span>{grandTotal.toLocaleString("vi-VN")}₫</span>
             </div>
           </div>
         </div>

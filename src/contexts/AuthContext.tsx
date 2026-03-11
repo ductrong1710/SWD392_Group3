@@ -1,15 +1,16 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { authApi, userApi, setToken, getToken, removeToken, UserProfile } from "../services/base-api";
-
+import { setToken, getToken, removeToken } from "../services/base-api";
+import { authApi } from "../services/auth-api";
+import { userApi } from "../services/user-api";
+import { User as UserProfile } from "../types";
 interface AuthContextType {
   user: UserProfile | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; role: string }>;
-  register: (data: { fullName: string; email: string; password: string; phone: string }) => Promise<boolean>;
-  logout: () => void;
+register: (data: { fullName: string; email: string; password: string; phone: string }) => Promise<{ success: boolean; message?: string }>;  logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -45,9 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await authApi.login({ email, password });
       setToken(response.token);
       
-      // Decode JWT to get role (simple decode, không verify)
-      const payload = JSON.parse(atob(response.token.split('.')[1]));
-      const role = payload.role?.toLowerCase() || 'user';
+      const role = response.role?.toLowerCase() || 'user';
       
       await loadUserProfile();
       return { success: true, role };
@@ -57,15 +56,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const register = async (data: { fullName: string; email: string; password: string; phone: string }) => {
+ const register = async (data: { fullName: string; email: string; password: string; phone: string }) => {
     try {
       const response = await authApi.register(data);
       setToken(response.token);
       await loadUserProfile();
-      return true;
-    } catch (error) {
+      return { success: true };
+    } catch (error: any) {
       console.error("Registration failed:", error);
-      return false;
+      // error.message chính là đoạn text từ backend ném ra thông qua hàm fetchApi ở base-api.ts
+      return { success: false, message: error.message || "Registration failed" }; 
     }
   };
 

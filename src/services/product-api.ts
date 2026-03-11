@@ -78,8 +78,7 @@ export const searchProducts = async (
 export const fetchProductDetail = async (
   productId: number
 ): Promise<ProductDetail> => {
-  return fetchApi(`/v1/products/${productId}`);
-};
+return fetchApi(`/v1/products/id/${productId}`);};
 
 // ============================================
 // FETCH PRODUCTS BY GENDER

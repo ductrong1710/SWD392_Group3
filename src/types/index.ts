@@ -2,6 +2,7 @@
 // COMMON TYPES
 // ============================================
 export type UserRole = "guest" | "user" | "admin" | "staff";
+
 export type PageType =
   | "home"
   | "products"
@@ -196,14 +197,12 @@ export interface OrderItem {
 // ORDER (khớp OrderResponseDto.java)
 // ============================================
 export type OrderStatus =
-  | "PENDING"
-  | "AWAITING_PAYMENT"
-  | "PROCESSING"
+  | "PREPARING"
   | "SHIPPING"
   | "DELIVERED"
   | "COMPLETED"
-  | "CANCELLED"
-  | "REFUNDED";
+  | "NOT_RECEIVED"
+  | "CANCELLED";
 
 export interface Order {
   orderId: number;
