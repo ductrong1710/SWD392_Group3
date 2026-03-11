@@ -46,7 +46,7 @@ public class Product {
     @Builder.Default
     private Boolean isActive = true;
 
-    @Column(name = "vector_embedding", columnDefinition = "vector(384)")
+    @Column(name = "vector_embedding", columnDefinition = "vector(3072)")
     @ColumnTransformer(write = "CAST(? AS vector)")
     private String vectorEmbedding;
 
