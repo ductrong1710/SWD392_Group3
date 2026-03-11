@@ -1,48 +1,48 @@
-package com.example.swd392_gr03_eco.seeder;
-
-import com.example.swd392_gr03_eco.model.entities.*;
-import com.example.swd392_gr03_eco.repositories.*;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import dev.langchain4j.data.embedding.Embedding;
-import dev.langchain4j.model.embedding.EmbeddingModel;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.CommandLineRunner;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-
-@Component
-@RequiredArgsConstructor
-@Slf4j
-public class DataSeeder implements CommandLineRunner {
-
-    //<editor-fold desc="Repositories and Services">
-    private final CategoryRepository categoryRepository;
-    private final RoleRepository roleRepository;
-    private final UserRepository userRepository;
-    private final ProductRepository productRepository;
-    private final ProductImageRepository productImageRepository;
-    private final ProductVariantRepository productVariantRepository;
-    private final OrderRepository orderRepository;
-    private final OrderItemRepository orderItemRepository;
-    private final PaymentRepository paymentRepository;
-    private final ReviewRepository reviewRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final ObjectMapper objectMapper;
-    private final EmbeddingModel embeddingModel;
-    private final Random random = new Random();
-
+//package com.example.swd392_gr03_eco.seeder;
+//
+//import com.example.swd392_gr03_eco.model.entities.*;
+//import com.example.swd392_gr03_eco.repositories.*;
+//import com.fasterxml.jackson.databind.ObjectMapper;
+//import dev.langchain4j.data.embedding.Embedding;
+//import dev.langchain4j.model.embedding.EmbeddingModel;
+//import lombok.RequiredArgsConstructor;
+//import lombok.extern.slf4j.Slf4j;
+//import org.springframework.boot.CommandLineRunner;
+//import org.springframework.security.crypto.password.PasswordEncoder;
+//import org.springframework.stereotype.Component;
+//import org.springframework.transaction.annotation.Transactional;
+//
+//import java.math.BigDecimal;
+//import java.math.RoundingMode;
+//import java.time.Instant;
+//import java.time.ZoneId;
+//import java.time.ZonedDateTime;
+//import java.util.*;
+//import java.util.concurrent.ThreadLocalRandom;
+//import java.util.stream.Collectors;
+//import java.util.stream.IntStream;
+//
+//@Component
+//@RequiredArgsConstructor
+//@Slf4j
+//public class DataSeeder implements CommandLineRunner {
+//
+//    //<editor-fold desc="Repositories and Services">
+//    private final CategoryRepository categoryRepository;
+//    private final RoleRepository roleRepository;
+//    private final UserRepository userRepository;
+//    private final ProductRepository productRepository;
+//    private final ProductImageRepository productImageRepository;
+//    private final ProductVariantRepository productVariantRepository;
+//    private final OrderRepository orderRepository;
+//    private final OrderItemRepository orderItemRepository;
+//    private final PaymentRepository paymentRepository;
+//    private final ReviewRepository reviewRepository;
+//    private final PasswordEncoder passwordEncoder;
+//    private final ObjectMapper objectMapper;
+//    private final EmbeddingModel embeddingModel;
+//    private final Random random = new Random();
+//
 //    //<editor-fold desc="Data for Random Generation">
 //    private static final List<String> ADJECTIVES = List.of("Vintage", "Modern", "Classic", "Oversized", "Slim-Fit", "Relaxed", "Graphic", "Minimalist", "Heavyweight", "Lightweight", "Washed", "Distressed");
 //    private static final List<String> STYLES_TOP = List.of("Crewneck", "V-Neck", "Henley", "Pocket", "Long-Sleeve", "Performance", "Button-Up", "Camp Collar");
@@ -60,32 +60,32 @@ public class DataSeeder implements CommandLineRunner {
 //    private static final List<String> SIZES = List.of("S", "M", "L", "XL");
 //    private static final List<String> MATERIALS = List.of("100% Cotton", "Polyester Blend", "Linen-Cotton Mix", "Stretch Denim", "Pure Silk", "Satin", "Pique Knit", "French Terry", "Flannel");
 //    //</editor-fold>
-
-    @Override
-    @Transactional
-    public void run(String... args) throws Exception {
-        if (userRepository.count() > 0) {
-            log.info(">>> Data already exists. Skipping seeding. <<<");
-            return;
-        }
-        log.info(">>> No data found. Starting data seeding... <<<");
-        seedCoreData();
+//
+//    @Override
+//    @Transactional
+//    public void run(String... args) throws Exception {
+//        if (userRepository.count() > 0) {
+//            log.info(">>> Data already exists. Skipping seeding. <<<");
+//            return;
+//        }
+//        log.info(">>> No data found. Starting data seeding... <<<");
+//        seedCoreData();
 //        seedAllProducts();
 //        seedSampleOrders();
 //        seedOrders();
-        log.info(">>> DATA SEEDING FINISHED SUCCESSFULLY <<<");
-    }
-
-    public void seedCoreData() {
-        log.info("Seeding Roles and Users...");
-        Role adminRole = getOrSaveRole("ADMIN");
-        Role customerRole = getOrSaveRole("CUSTOMER");
-        Role staffRole = getOrSaveRole("STAFF");
-        createUserIfNotExist("Main Admin", "admin@example.com", "0901000001", "123 Main St, HCMC", "123456", adminRole);
-        createUserIfNotExist("John Doe", "customer@example.com", "0901000003", "789 Nguyen Trai St, HCMC", "123456", customerRole);
-        createUserIfNotExist("Jane Smith", "staff@example.com", "0901000004", "321 Le Loi St, HCMC", "123456", staffRole);
-    }
-
+//        log.info(">>> DATA SEEDING FINISHED SUCCESSFULLY <<<");
+//    }
+//
+//    public void seedCoreData() {
+//        log.info("Seeding Roles and Users...");
+//        Role adminRole = getOrSaveRole("ADMIN");
+//        Role customerRole = getOrSaveRole("CUSTOMER");
+//        Role staffRole = getOrSaveRole("STAFF");
+//        createUserIfNotExist("Main Admin", "admin@example.com", "0901000001", "123 Main St, HCMC", "123456", adminRole);
+//        createUserIfNotExist("John Doe", "customer@example.com", "0901000003", "789 Nguyen Trai St, HCMC", "123456", customerRole);
+//        createUserIfNotExist("Jane Smith", "staff@example.com", "0901000004", "321 Le Loi St, HCMC", "123456", staffRole);
+//    }
+//
 //    public void seedAllProducts() {
 //        log.info(">>> Seeding products automatically...");
 //        // --- CATEGORIES ---
@@ -229,10 +229,10 @@ public class DataSeeder implements CommandLineRunner {
 //    }
 //
 //    //<editor-fold desc="Helper Methods">
-    private User createUserIfNotExist(String name, String email, String phone, String address, String password, Role role) { return userRepository.save(User.builder().fullName(name).email(email).phone(phone).address(address).passwordHash(passwordEncoder.encode(password)).isActive(true).createdAt(Instant.now()).role(role).build()); }
+//    private User createUserIfNotExist(String name, String email, String phone, String address, String password, Role role) { return userRepository.save(User.builder().fullName(name).email(email).phone(phone).address(address).passwordHash(passwordEncoder.encode(password)).isActive(true).createdAt(Instant.now()).role(role).build()); }
 //    private Product createProductWithoutVector(String name, String desc, Category category, String brand, String price) { Product product = Product.builder().name(name).description(desc).category(category).brandName(brand).basePrice(new BigDecimal(price)).isActive(true).createdAt(Instant.now()).build(); return productRepository.saveAndFlush(product); }
 //    private void updateProductWithVector(Product product, List<ProductVariant> variants) { StringBuilder embeddingBuilder = new StringBuilder(); embeddingBuilder.append("Name: ").append(product.getName()).append(". "); embeddingBuilder.append("Description: ").append(product.getDescription()).append(". "); embeddingBuilder.append("Brand: ").append(product.getBrandName()).append(". "); if (variants != null && !variants.isEmpty()) { Set<String> colors = variants.stream().map(ProductVariant::getColor).collect(Collectors.toSet()); Set<String> materials = variants.stream().map(ProductVariant::getMaterial).collect(Collectors.toSet()); Set<String> sizes = variants.stream().map(ProductVariant::getSize).collect(Collectors.toSet()); if (!colors.isEmpty()) embeddingBuilder.append("Available colors: ").append(String.join(", ", colors)).append(". "); if (!materials.isEmpty()) embeddingBuilder.append("Materials: ").append(String.join(", ", materials)).append(". "); if (!sizes.isEmpty()) embeddingBuilder.append("Available sizes: ").append(String.join(", ", sizes)).append(". "); } Embedding embedding = embeddingModel.embed(embeddingBuilder.toString()).content(); float[] vector = embedding.vector(); String vectorString = IntStream.range(0, vector.length).mapToObj(i -> String.valueOf(vector[i])).collect(Collectors.joining(",", "[", "]")); product.setVectorEmbedding(vectorString); productRepository.saveAndFlush(product); }
-    private Role getOrSaveRole(String roleName) { return roleRepository.findByRoleName(roleName).orElseGet(() -> roleRepository.save(Role.builder().roleName(roleName).build())); }
+//    private Role getOrSaveRole(String roleName) { return roleRepository.findByRoleName(roleName).orElseGet(() -> roleRepository.save(Role.builder().roleName(roleName).build())); }
 //    private Category getOrSaveCategory(String name, Category parent) { return categoryRepository.findByName(name).orElseGet(() -> categoryRepository.save(Category.builder().name(name).parent(parent).build())); }
 //    private ProductImage createProductImage(Product product, String imageUrl, boolean isThumbnail, String color) { return productImageRepository.save(ProductImage.builder().product(product).imageUrl(imageUrl).isThumbnail(isThumbnail).color(color).build()); }
 //    private ProductVariant createProductVariant(Product product, String sku, String color, String size, String material, String priceOverride, int stock) { return productVariantRepository.save(ProductVariant.builder().product(product).sku(sku).color(color).size(size).material(material).priceOverride(priceOverride != null ? new BigDecimal(priceOverride) : null).stockQuantity(stock).build()); }
@@ -242,4 +242,4 @@ public class DataSeeder implements CommandLineRunner {
 //    private Payment createPayment(Order order, User user, String method, String status, String transactionCode) { return paymentRepository.save(Payment.builder().order(order).user(user).method(method).status(status).transactionCode(transactionCode).paidAt(status.equals("SUCCESS") ? Instant.now() : null).build()); }
 //    private Review createReview(User user, OrderItem orderItem, int rating, String comment) { return reviewRepository.save(Review.builder().user(user).orderItem(orderItem).rating(rating).comment(comment).createdAt(Instant.now()).build()); }
 //    //</editor-fold>
-}
+//}
