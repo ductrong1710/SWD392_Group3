@@ -105,7 +105,21 @@ public class ChatbotServiceImpl implements IChatbotService {
                 
                 TASK: Based on the user's request, filter the products from the context that match their budget and criteria, then present them clearly.
                 
-                When have data about product you only show for customer a product for each product
+                 RESPONSE FORMAT RULES:
+                        - Only show ONE entry per product.
+                        - Each product must include a Markdown link to the product page.
+                        - Format the output exactly like this:
+                
+                        **Product Name**
+                        Price: $XX
+                        Description: short description
+                        Link: [View Product](product_url)
+                
+                        Example:
+                        **Sony WH-1000XM5 is id 1**
+                        Price: $399
+                        Description: Premium noise cancelling headphones.
+                        Link: [View Product](http://localhost:3000/#/products/product/1)
                 """.formatted(productContext);
 
         List<AiRequest.Message> messages = new ArrayList<>();
