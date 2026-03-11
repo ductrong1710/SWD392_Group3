@@ -104,6 +104,8 @@ public class ChatbotServiceImpl implements IChatbotService {
                 ---
                 
                 TASK: Based on the user's request, filter the products from the context that match their budget and criteria, then present them clearly.
+                
+                When have data about product you only show for customer a product for each product
                 """.formatted(productContext);
 
         List<AiRequest.Message> messages = new ArrayList<>();

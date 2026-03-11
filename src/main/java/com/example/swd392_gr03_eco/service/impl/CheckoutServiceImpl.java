@@ -57,20 +57,20 @@ public class CheckoutServiceImpl implements ICheckoutService {
         cart.setFinalAmount(cart.getTotalAmount());
         
         if ("COD".equalsIgnoreCase(request.getPaymentMethod())) {
-            cart.setStatus("COMPLETED");
+            cart.setStatus("AWAITING_PAYMENT");
             Order completedOrder = orderRepository.save(cart);
 
             Payment payment = Payment.builder()
                 .order(completedOrder)
                 .user(user)
                 .method("COD")
-                .status("SUCCESS")
+                .status("AWAITING_PAYMENT")
                 .paidAt(Instant.now()) // Use Instant.now()
                 .build();
             paymentRepository.save(payment);
 
             return CheckoutResponse.builder()
-                .paymentUrl("/checkout-success?orderId=" + completedOrder.getId() + "&status=SUCCESS")
+                .paymentUrl("/checkout-success?orderId=" + completedOrder.getId() + "&status=AWAITING_PAYMENT")
                 .orderId(completedOrder.getId())
                 .build();
         }

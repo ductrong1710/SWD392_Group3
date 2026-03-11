@@ -42,15 +42,15 @@ public class Order {
 
     @Column(name = "shipping_address_json", columnDefinition = "TEXT")
     private String shippingAddressJson;
-    
-    @Column(name = "shipping_provider")
-    private String shippingProvider;
 
-    @Column(name = "tracking_code")
-    private String trackingCode;
+    @Column(name = "tracking")
+    private String tracking;
 
     @Column(name = "created_at")
     private Instant createdAt;
+
+    @Column(name = "update_at")
+    private Instant updateAt;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
     @Builder.Default

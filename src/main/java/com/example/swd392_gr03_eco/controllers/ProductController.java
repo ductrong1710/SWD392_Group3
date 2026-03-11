@@ -82,9 +82,14 @@ public class ProductController {
         return ResponseEntity.ok(productService.getProductsByGender(gender, pageable));
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/id/{id}")
     public ResponseEntity<ProductDetailDto> getProductById(@PathVariable Integer id) {
         return ResponseEntity.ok(productService.getProductById(id));
+    }
+
+    @GetMapping("/name/{name}")
+    public ResponseEntity<ProductDetailDto> getProductByName(@PathVariable String name) {
+        return ResponseEntity.ok(productService.getProductByName(name));
     }
 
     // --- Admin/Staff APIs ---
@@ -94,6 +99,18 @@ public class ProductController {
     public ResponseEntity<List<ProductDetailDto>> getAllProductsAdmin() {
         return ResponseEntity.ok(productService.getAllProductsAdmin());
     }
+
+    @GetMapping("/all/active")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'STAFF')")
+    public ResponseEntity<List<ProductDetailDto>> getAllProductsActive() {
+        return ResponseEntity.ok(productService.getAllProductsActive());
+    }
+    @GetMapping("/all/inactive")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'STAFF')")
+    public ResponseEntity<List<ProductDetailDto>> getAllProductsInActive() {
+        return ResponseEntity.ok(productService.getAllProductsInActive());
+    }
+
 
     @PostMapping
     @PreAuthorize("hasAnyAuthority('ADMIN', 'STAFF')")

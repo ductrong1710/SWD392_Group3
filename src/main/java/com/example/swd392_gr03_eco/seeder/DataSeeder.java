@@ -15,6 +15,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
@@ -39,7 +41,7 @@ public class DataSeeder implements CommandLineRunner {
     private final PasswordEncoder passwordEncoder;
     private final ObjectMapper objectMapper;
     private final EmbeddingModel embeddingModel;
-    //</editor-fold>
+    private final Random random = new Random();
 
     //<editor-fold desc="Data for Random Generation">
     private static final List<String> ADJECTIVES = List.of("Vintage", "Modern", "Classic", "Oversized", "Slim-Fit", "Relaxed", "Graphic", "Minimalist", "Heavyweight", "Lightweight", "Washed", "Distressed");
@@ -70,6 +72,7 @@ public class DataSeeder implements CommandLineRunner {
         seedCoreData();
         seedAllProducts();
         seedSampleOrders();
+        seedOrders();
         log.info(">>> DATA SEEDING FINISHED SUCCESSFULLY <<<");
     }
 
@@ -152,6 +155,78 @@ public class DataSeeder implements CommandLineRunner {
             updateProductWithVector(product, variants);
         }
     }
+    public void seedOrders() {
+        // Only seed if there are no completed orders
+        if (orderRepository.count() > 15) {
+            System.out.println("Order data already exists. Skipping seeding.");
+            return;
+        }
+
+        User customer = userRepository.findByEmail("customer@example.com").orElse(null);
+        List<ProductVariant> variants = productVariantRepository.findAll();
+
+        if (customer == null || variants.isEmpty()) {
+            System.out.println("Cannot seed orders without a customer or product variants.");
+            return;
+        }
+
+        System.out.println("Seeding Orders...");
+        ZonedDateTime now = ZonedDateTime.now(ZoneId.of("UTC"));
+
+        // Orders for today
+        createAndSaveOrder(customer, variants, "COMPLETED", now.toInstant());
+        createAndSaveOrder(customer, variants, "COMPLETED", now.minusHours(3).toInstant());
+
+        // Orders for this week
+        createAndSaveOrder(customer, variants, "COMPLETED", now.minusDays(2).toInstant());
+        createAndSaveOrder(customer, variants, "PROCESSING", now.minusDays(1).toInstant()); // Not completed
+
+        // Orders for this month
+        createAndSaveOrder(customer, variants, "COMPLETED", now.minusWeeks(2).toInstant());
+        createAndSaveOrder(customer, variants, "COMPLETED", now.minusWeeks(1).toInstant());
+
+        // Orders for last month
+        createAndSaveOrder(customer, variants, "COMPLETED", now.minusMonths(1).withDayOfMonth(5).toInstant());
+        createAndSaveOrder(customer, variants, "COMPLETED", now.minusMonths(1).withDayOfMonth(20).toInstant());
+
+        // Orders for this year
+        createAndSaveOrder(customer, variants, "COMPLETED", now.minusMonths(3).toInstant());
+
+        // Orders for last year
+        createAndSaveOrder(customer, variants, "COMPLETED", now.minusYears(1).plusMonths(1).toInstant());
+
+        System.out.println("Finished seeding Orders.");
+    }
+
+    private void createAndSaveOrder(User user, List<ProductVariant> variants, String status, Instant createdAt) {
+        ProductVariant variant = variants.get(random.nextInt(variants.size()));
+        int quantity = random.nextInt(3) + 1;
+        BigDecimal price = variant.getProduct().getBasePrice();
+        BigDecimal totalAmount = price.multiply(BigDecimal.valueOf(quantity));
+
+        Order order = Order.builder()
+                .user(user)
+                .totalAmount(totalAmount)
+                .discountAmount(BigDecimal.ZERO)
+                .finalAmount(totalAmount)
+                .status(status)
+                .tracking("COMPLETED") // Assume all seeded orders are tracked as completed
+                .shippingAddressJson("{\\\"fullName\\\":\\\"Test User\\\",\\\"phone\\\":\\\"123456789\\\"}")
+                .createdAt(createdAt)
+                .updateAt(createdAt)
+                .build();
+
+        Order savedOrder = orderRepository.save(order);
+
+        OrderItem orderItem = OrderItem.builder()
+                .order(savedOrder)
+                .productVariant(variant)
+                .quantity(quantity)
+                .priceAtPurchase(price)
+                .build();
+
+        orderItemRepository.save(orderItem);
+    }
 
     //<editor-fold desc="Helper Methods">
     private User createUserIfNotExist(String name, String email, String phone, String address, String password, Role role) { return userRepository.save(User.builder().fullName(name).email(email).phone(phone).address(address).passwordHash(passwordEncoder.encode(password)).isActive(true).createdAt(Instant.now()).role(role).build()); }
@@ -161,7 +236,7 @@ public class DataSeeder implements CommandLineRunner {
     private Category getOrSaveCategory(String name, Category parent) { return categoryRepository.findByName(name).orElseGet(() -> categoryRepository.save(Category.builder().name(name).parent(parent).build())); }
     private ProductImage createProductImage(Product product, String imageUrl, boolean isThumbnail, String color) { return productImageRepository.save(ProductImage.builder().product(product).imageUrl(imageUrl).isThumbnail(isThumbnail).color(color).build()); }
     private ProductVariant createProductVariant(Product product, String sku, String color, String size, String material, String priceOverride, int stock) { return productVariantRepository.save(ProductVariant.builder().product(product).sku(sku).color(color).size(size).material(material).priceOverride(priceOverride != null ? new BigDecimal(priceOverride) : null).stockQuantity(stock).build()); }
-    private Order createOrder(User user, String notes, String status) { Map<String, String> address = Map.of("fullName", user.getFullName(), "phone", user.getPhone(), "address", user.getAddress(), "notes", notes); String addressJson = ""; try { addressJson = objectMapper.writeValueAsString(address); } catch (Exception e) { log.error("Error serializing address", e); } Order order = Order.builder().user(user).status(status).shippingAddressJson(addressJson).shippingProvider("GHTK").createdAt(Instant.now()).totalAmount(BigDecimal.ZERO).discountAmount(BigDecimal.ZERO).finalAmount(BigDecimal.ZERO).build(); return orderRepository.save(order); }
+    private Order createOrder(User user, String notes, String status) { Map<String, String> address = Map.of("fullName", user.getFullName(), "phone", user.getPhone(), "address", user.getAddress(), "notes", notes); String addressJson = ""; try { addressJson = objectMapper.writeValueAsString(address); } catch (Exception e) { log.error("Error serializing address", e); } Order order = Order.builder().user(user).status(status).shippingAddressJson(addressJson).createdAt(Instant.now()).totalAmount(BigDecimal.ZERO).discountAmount(BigDecimal.ZERO).finalAmount(BigDecimal.ZERO).build(); return orderRepository.save(order); }
     private OrderItem createOrderItem(Order order, ProductVariant variant, int quantity, BigDecimal priceAtPurchase) { return orderItemRepository.save(OrderItem.builder().order(order).productVariant(variant).quantity(quantity).priceAtPurchase(priceAtPurchase).build()); }
     private void updateOrderTotals(Order order) { List<OrderItem> items = orderItemRepository.findByOrder(order); BigDecimal total = items.stream().map(item -> item.getPriceAtPurchase().multiply(new BigDecimal(item.getQuantity()))).reduce(BigDecimal.ZERO, BigDecimal::add); order.setTotalAmount(total); order.setFinalAmount(total.subtract(order.getDiscountAmount() != null ? order.getDiscountAmount() : BigDecimal.ZERO)); orderRepository.save(order); }
     private Payment createPayment(Order order, User user, String method, String status, String transactionCode) { return paymentRepository.save(Payment.builder().order(order).user(user).method(method).status(status).transactionCode(transactionCode).paidAt(status.equals("SUCCESS") ? Instant.now() : null).build()); }
