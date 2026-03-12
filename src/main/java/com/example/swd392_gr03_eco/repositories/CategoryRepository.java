@@ -12,8 +12,15 @@ import java.util.Optional;
 @Repository
 public interface CategoryRepository extends JpaRepository<Category, Integer> {
     Optional<Category> findByName(String name);
+
+    /**
+     * Finds all top-level categories (those without a parent).
+     * @return A list of root categories.
+     */
+    List<Category> findByParentIsNull();
+
     @Query(value = "WITH RECURSIVE subcategories AS (" +
-            "SELECT id FROM categories WHERE id = :parentId " + // Thử đổi 'category' thành 'categories'
+            "SELECT id FROM categories WHERE id = :parentId " +
             "UNION ALL " +
             "SELECT c.id FROM categories c INNER JOIN subcategories s ON c.parent_id = s.id) " +
             "SELECT id FROM subcategories", nativeQuery = true)
