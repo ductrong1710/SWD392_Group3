@@ -16,6 +16,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -29,18 +30,30 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList(
+
+        // Cho phép cả localhost + Render frontend
+        List<String> allowedOrigins = Arrays.asList(
                 "http://localhost:3000",
                 "http://localhost:5173",
                 "http://127.0.0.1:3000",
                 "http://127.0.0.1:5173",
-                "https://swd392-group3-fe.onrender.com" // Render frontend
+                "https://swd392-group3-fe.onrender.com"
+        );
+        configuration.setAllowedOrigins(allowedOrigins);
+
+        configuration.setAllowedMethods(Arrays.asList(
+                HttpMethod.GET.name(),
+                HttpMethod.POST.name(),
+                HttpMethod.PUT.name(),
+                HttpMethod.DELETE.name(),
+                HttpMethod.PATCH.name(),
+                HttpMethod.OPTIONS.name()
         ));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-        configuration.setAllowedHeaders(Arrays.asList("*"));
+
+        configuration.setAllowedHeaders(Arrays.asList("*")); // Cho phép tất cả header
         configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Type"));
-        configuration.setAllowCredentials(true);
-        configuration.setMaxAge(3600L);
+        configuration.setAllowCredentials(true); // nếu dùng cookie hoặc Bearer token
+        configuration.setMaxAge(3600L); // cache preflight 1h
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
@@ -52,10 +65,11 @@ public class SecurityConfig {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
-                // Cho phép OPTIONS request qua mà không cần xác thực
+                // Cho phép preflight request OPTIONS qua mà không cần xác thực
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        // --- PUBLIC ENDPOINTS ---
+
+                        // PUBLIC ENDPOINTS
                         .requestMatchers(
                                 "/api/v1/auth/**",
                                 "/api/v1/chatbot/**",
@@ -69,7 +83,8 @@ public class SecurityConfig {
                                 "/api/v1/categories/**",
                                 "/api/v1/reviews/**"
                         ).permitAll()
-                        // --- AUTHENTICATED ENDPOINTS ---
+
+                        // AUTHENTICATED ENDPOINTS
                         .requestMatchers("/api/v1/users/**").authenticated()
                         .requestMatchers(
                                 "/api/v1/cart/**",
@@ -77,11 +92,13 @@ public class SecurityConfig {
                                 "/api/v1/orders/**"
                         ).hasAnyAuthority("CUSTOMER", "STAFF", "ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/v1/reviews").hasAnyAuthority("CUSTOMER", "STAFF", "ADMIN")
-                        // --- STAFF & ADMIN ENDPOINTS ---
+
+                        // STAFF & ADMIN ENDPOINTS
                         .requestMatchers("/api/v1/admin/**").hasAnyAuthority("STAFF", "ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/v1/products", "/api/v1/categories").hasAnyAuthority("STAFF", "ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/products/**", "/api/v1/categories/**").hasAnyAuthority("STAFF", "ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/products/**", "/api/v1/categories/**").hasAnyAuthority("STAFF", "ADMIN")
+
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
