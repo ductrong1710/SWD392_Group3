@@ -19,7 +19,7 @@ import java.util.Arrays;
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity // Keep this to enable @PreAuthorize
+@EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -34,7 +34,7 @@ public class SecurityConfig {
                 "http://localhost:5173",
                 "http://127.0.0.1:3000",
                 "http://127.0.0.1:5173",
-                "https://swd392-group3-fe.onrender.com"
+                "https://swd392-group3-fe.onrender.com" // Render frontend
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
@@ -52,7 +52,9 @@ public class SecurityConfig {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
+                // Cho phép OPTIONS request qua mà không cần xác thực
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         // --- PUBLIC ENDPOINTS ---
                         .requestMatchers(
                                 "/api/v1/auth/**",
@@ -61,15 +63,13 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**"
                         ).permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/users").permitAll() // Allow user creation
+                        .requestMatchers(HttpMethod.POST, "/api/v1/users").permitAll()
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/products/**",
                                 "/api/v1/categories/**",
                                 "/api/v1/reviews/**"
                         ).permitAll()
-
                         // --- AUTHENTICATED ENDPOINTS ---
-                        // Let @PreAuthorize handle specific roles for /api/v1/users/**
                         .requestMatchers("/api/v1/users/**").authenticated()
                         .requestMatchers(
                                 "/api/v1/cart/**",
@@ -77,13 +77,11 @@ public class SecurityConfig {
                                 "/api/v1/orders/**"
                         ).hasAnyAuthority("CUSTOMER", "STAFF", "ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/v1/reviews").hasAnyAuthority("CUSTOMER", "STAFF", "ADMIN")
-
                         // --- STAFF & ADMIN ENDPOINTS ---
                         .requestMatchers("/api/v1/admin/**").hasAnyAuthority("STAFF", "ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/v1/products", "/api/v1/categories").hasAnyAuthority("STAFF", "ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/products/**", "/api/v1/categories/**").hasAnyAuthority("STAFF", "ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/products/**", "/api/v1/categories/**").hasAnyAuthority("STAFF", "ADMIN")
-
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
