@@ -65,11 +65,11 @@ public class SecurityConfig {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
-                // Cho phép preflight request OPTIONS qua mà không cần xác thực
                 .authorizeHttpRequests(auth -> auth
+                        // Cho phép OPTIONS (preflight) đi qua
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // PUBLIC ENDPOINTS
+                        // --- PUBLIC ENDPOINTS ---
                         .requestMatchers(
                                 "/api/v1/auth/**",
                                 "/api/v1/chatbot/**",
@@ -78,13 +78,14 @@ public class SecurityConfig {
                                 "/v3/api-docs/**"
                         ).permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/users").permitAll()
+                        // Cho phép tất cả GET public
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/products/**",
                                 "/api/v1/categories/**",
                                 "/api/v1/reviews/**"
                         ).permitAll()
 
-                        // AUTHENTICATED ENDPOINTS
+                        // --- AUTHENTICATED ENDPOINTS ---
                         .requestMatchers("/api/v1/users/**").authenticated()
                         .requestMatchers(
                                 "/api/v1/cart/**",
@@ -93,12 +94,13 @@ public class SecurityConfig {
                         ).hasAnyAuthority("CUSTOMER", "STAFF", "ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/v1/reviews").hasAnyAuthority("CUSTOMER", "STAFF", "ADMIN")
 
-                        // STAFF & ADMIN ENDPOINTS
+                        // --- STAFF & ADMIN ENDPOINTS ---
                         .requestMatchers("/api/v1/admin/**").hasAnyAuthority("STAFF", "ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/v1/products", "/api/v1/categories").hasAnyAuthority("STAFF", "ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/products/**", "/api/v1/categories/**").hasAnyAuthority("STAFF", "ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/products/**", "/api/v1/categories/**").hasAnyAuthority("STAFF", "ADMIN")
 
+                        // Bất kỳ request nào khác đều yêu cầu xác thực
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
