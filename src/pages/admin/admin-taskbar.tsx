@@ -20,6 +20,7 @@ export default function AdminTaskbar({
     //{ id: "admin-reviews", label: "Reviews" },
     { id: "admin-users", label: "Users" },
     { id: "admin-analytics", label: "Analytics" },
+    { id: "admin-categories", label: "Categories" }
   ];
 
   return (

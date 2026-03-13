@@ -22,10 +22,12 @@ export type PageType =
   | "admin-users"
   | "admin-reviews"
   | "admin-analytics"
+  | "admin-categories"
 
   | "staff-dashboard"
   | "staff-products"
-  | "staff-orders";
+  | "staff-orders"
+  | "staff-categories";
 
 // ============================================
 // AUTH (khớp AuthResponse.java)
@@ -53,6 +55,9 @@ export interface AuthResponse {
 export interface Category {
   id: number;
   name: string;
+  parentId?: number | null;
+  parentName?: string | null;
+  children?: Category[];
 }
 
 // ============================================
@@ -346,4 +351,8 @@ export interface VariantRequestDto {
   material?: string;
   priceOverride?: number;
   stockQuantity: number;
+}
+export interface CategoryRequest {
+  name: string;
+  parentId?: number | null;
 }

@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
-import { Package, ShoppingCart, LogOut } from "lucide-react";
+import CategoryManagement from "../pages/admin/CategoryManagement";
+import { Package, ShoppingCart, LogOut, List } from "lucide-react";
+
 import type {
   UserRole,
   PageType,
@@ -30,6 +32,11 @@ const navItems = [
     page: "staff-products" as PageType,
     label: "Products",
     icon: Package,
+  },
+  { 
+    page: "staff-categories" as PageType, 
+    label: "Categories", 
+    icon: List 
   },
   { page: "staff-orders" as PageType, label: "Orders", icon: ShoppingCart },
 ];
@@ -84,6 +91,7 @@ export default function StaffLayout({
         {/* Staff có thể quản lý sản phẩm và đơn hàng, nên ta dùng lại component của admin */}
         {currentPage === "staff-products" && <AdminProducts products={products} setProducts={setProducts} />}
         {currentPage === "staff-orders" && <AdminOrders orders={orders} setOrders={setOrders} />}
+        {currentPage === "staff-categories" && <CategoryManagement />}
       </main>
 
       <ChatbotWidget role="staff" />

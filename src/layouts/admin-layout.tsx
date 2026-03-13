@@ -18,6 +18,7 @@ import AdminReviews from "../pages/admin/admin-reviews";
 import AdminUsers from "../pages/admin/admin-users";
 import AdminAnalytics from "../pages/admin/admin-analytics";
 import ChatbotWidget from "../component/common/chatbot-widget";
+import CategoryManagement from "../pages/admin/CategoryManagement";
 
 interface AdminLayoutProps {
   role: UserRole;
@@ -82,6 +83,7 @@ export default function AdminLayout({
         {currentPage === "admin-analytics" && (
           <AdminAnalytics products={products} orders={orders} />
         )}
+        {currentPage === "admin-categories" && <CategoryManagement />}
       </main>
       <ChatbotWidget role="admin" />
     </div>
