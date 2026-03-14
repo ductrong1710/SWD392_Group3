@@ -4,13 +4,13 @@ import { useState, Dispatch, SetStateAction } from "react";
 import { ChevronRight } from "lucide-react";
 import { checkoutApi } from "../../services/checkout-api";
 import { useToast } from "../../contexts/ToastContext";
+import type { OrderResponse } from "../../services/order-api";
 import type { CartItem, PageType } from "../../types";
-import type { OrderResponseDto } from "../../services/order-api";
 
 interface UserCheckoutProps {
   cart: CartItem[];
   setCart: (cart: CartItem[]) => void;
-  setOrders: (orders: OrderResponseDto[]) => void;  // ← đổi Order[] thành OrderResponseDto[]
+  setOrders: (orders: OrderResponse[]) => void;
   setCurrentPage: Dispatch<SetStateAction<PageType>>;
 }
 
@@ -27,7 +27,7 @@ export default function UserCheckout({
     phone: "",
     addressLine: "",
     city: "",
-    paymentMethod: "VNPAY" as "VNPAY",  // ← chỉ VNPAY
+    paymentMethod: "VNPAY" as "VNPAY" | "COD",
   });
   const toast = useToast();
 
@@ -50,6 +50,7 @@ export default function UserCheckout({
 
     try {
       setIsSubmitting(true);
+
       const response = await checkoutApi.checkout({
         shippingAddress: {
           fullName: formData.fullName,
@@ -57,21 +58,25 @@ export default function UserCheckout({
           addressLine: formData.addressLine,
           city: formData.city,
         },
-        paymentMethod: "VNPAY",
+        paymentMethod: formData.paymentMethod,
       });
 
-      // VNPAY: redirect sang payment gateway
-      if (response.paymentUrl) {
+      if (formData.paymentMethod === "VNPAY" && response.paymentUrl) {
         toast.info("Redirecting", "Redirecting to VNPay payment gateway...");
         window.location.href = response.paymentUrl;
         return;
       }
 
-      // Fallback nếu không có paymentUrl
+      setOrders([]);
       setCart([]);
-      toast.success("Order placed!", "Your order has been placed successfully");
+      toast.success(
+        "Order placed!",
+        formData.paymentMethod === "COD"
+          ? "Your order has been placed successfully with Cash on Delivery."
+          : "Your order has been placed successfully."
+      );
       setCurrentPage("orders");
-    } catch (error) {
+    } catch {
       toast.error("Checkout failed", "Something went wrong. Please try again.");
     } finally {
       setIsSubmitting(false);
@@ -84,22 +89,24 @@ export default function UserCheckout({
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
-          {/* Steps */}
           <div className="flex items-center gap-4 mb-12">
-            <div className={`flex items-center justify-center w-10 h-10 rounded-full font-semibold transition-colors ${
-              step >= 1 ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
-            }`}>
+            <div
+              className={`flex items-center justify-center w-10 h-10 rounded-full font-semibold transition-colors ${
+                step >= 1 ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
+              }`}
+            >
               1
             </div>
             <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            <div className={`flex items-center justify-center w-10 h-10 rounded-full font-semibold transition-colors ${
-              step >= 2 ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
-            }`}>
+            <div
+              className={`flex items-center justify-center w-10 h-10 rounded-full font-semibold transition-colors ${
+                step >= 2 ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
+              }`}
+            >
               2
             </div>
           </div>
 
-          {/* Step 1: Shipping Address */}
           {step === 1 && (
             <div className="space-y-4">
               <h3 className="text-xl font-semibold mb-6">Shipping Address</h3>
@@ -134,34 +141,60 @@ export default function UserCheckout({
             </div>
           )}
 
-          {/* Step 2: Confirm + Payment */}
           {step === 2 && (
             <div className="space-y-4">
               <h3 className="text-xl font-semibold mb-6">Confirm Order</h3>
 
-              {/* Shipping summary */}
               <div className="bg-secondary rounded-lg p-4 space-y-2 text-sm">
                 <p className="font-medium mb-2">Shipping Address</p>
-                <p>{formData.fullName} — {formData.phone}</p>
-                <p>{formData.addressLine}, {formData.city}</p>
+                <p>
+                  {formData.fullName} - {formData.phone}
+                </p>
+                <p>
+                  {formData.addressLine}, {formData.city}
+                </p>
               </div>
 
-              {/* Payment method — chỉ VNPAY */}
-              <div className="flex items-center gap-3 p-4 border border-primary bg-primary/5 rounded-lg">
-                <input
-                  type="radio"
-                  name="payment"
-                  value="VNPAY"
-                  checked
-                  readOnly
-                  className="w-4 h-4"
-                />
-                <div>
-                  <span className="font-medium">VNPay</span>
-                  <p className="text-sm text-muted-foreground">
-                    Pay securely via VNPay gateway
-                  </p>
-                </div>
+              <div className="space-y-3">
+                <p className="text-sm font-medium">Payment Method</p>
+
+                <label className="flex items-center gap-3 p-4 border border-primary bg-primary/5 rounded-lg cursor-pointer">
+                  <input
+                    type="radio"
+                    name="payment"
+                    value="VNPAY"
+                    checked={formData.paymentMethod === "VNPAY"}
+                    onChange={() =>
+                      setFormData({ ...formData, paymentMethod: "VNPAY" })
+                    }
+                    className="w-4 h-4"
+                  />
+                  <div>
+                    <span className="font-medium">VNPay</span>
+                    <p className="text-sm text-muted-foreground">
+                      Pay securely via VNPay gateway
+                    </p>
+                  </div>
+                </label>
+
+                <label className="flex items-center gap-3 p-4 border border-border bg-background rounded-lg cursor-pointer hover:bg-secondary/50 transition-colors">
+                  <input
+                    type="radio"
+                    name="payment"
+                    value="COD"
+                    checked={formData.paymentMethod === "COD"}
+                    onChange={() =>
+                      setFormData({ ...formData, paymentMethod: "COD" })
+                    }
+                    className="w-4 h-4"
+                  />
+                  <div>
+                    <span className="font-medium">Cash on Delivery</span>
+                    <p className="text-sm text-muted-foreground">
+                      Pay in cash when your order is delivered
+                    </p>
+                  </div>
+                </label>
               </div>
             </div>
           )}
@@ -184,12 +217,13 @@ export default function UserCheckout({
                 ? "Processing..."
                 : step === 1
                 ? "Continue"
-                : "Pay with VNPay"}
+                : formData.paymentMethod === "VNPAY"
+                ? "Pay with VNPay"
+                : "Place COD Order"}
             </button>
           </div>
         </div>
 
-        {/* Order Summary */}
         <div className="lg:col-span-1">
           <div className="bg-card border border-border rounded-lg p-6 sticky top-20">
             <h3 className="text-lg font-semibold mb-6">Order Summary</h3>
@@ -198,32 +232,36 @@ export default function UserCheckout({
                 <div key={item.productVariantId} className="text-sm">
                   <div className="flex justify-between mb-1">
                     <span className="font-medium">{item.productName}</span>
-                    <span>×{item.quantity}</span>
+                    <span>x{item.quantity}</span>
                   </div>
                   <div className="flex justify-between text-muted-foreground text-xs">
-                    <span>{item.color} / {item.size}</span>
-                    <span>{(item.price * item.quantity).toLocaleString("vi-VN")}₫</span>
+                    <span>
+                      {item.color} / {item.size}
+                    </span>
+                    <span>${(item.price * item.quantity).toLocaleString("en-US")}</span>
                   </div>
                 </div>
               ))}
             </div>
+
             <div className="space-y-3 mb-6 pb-6 border-b border-border">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Subtotal</span>
-                <span>{total.toLocaleString("vi-VN")}₫</span>
+                <span>${Number(total ?? 0).toLocaleString("en-US")}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Shipping</span>
-                <span>{shipping.toLocaleString("vi-VN")}₫</span>
+                <span>${Number(shipping ?? 0).toLocaleString("en-US")}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Tax (10%)</span>
-                <span>{tax.toLocaleString("vi-VN")}₫</span>
+                <span>${Number(tax ?? 0).toLocaleString("en-US")}</span>
               </div>
             </div>
+
             <div className="flex justify-between font-semibold text-lg">
               <span>Total</span>
-              <span>{grandTotal.toLocaleString("vi-VN")}₫</span>
+              <span>${Number(grandTotal ?? 0).toLocaleString("en-US")}</span>
             </div>
           </div>
         </div>

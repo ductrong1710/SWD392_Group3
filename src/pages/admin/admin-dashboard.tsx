@@ -1,330 +1,574 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react";
 import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
   BarChart,
   Bar,
+  CartesianGrid,
   XAxis,
   YAxis,
-  CartesianGrid,
   Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from "recharts"
-import { TrendingUp, ShoppingBag, Users, DollarSign, Package, ArrowUpRight } from "lucide-react"
-import type { ProductSummary, Order, Review, User, DashboardStats } from "../../types"
-import { dashboardApi } from "../../services/dashboard-api"
-import { useToast } from "../../contexts/ToastContext"
+} from "recharts";
+import {
+  ArrowUpRight,
+  DollarSign,
+  Package,
+  ShoppingBag,
+  TrendingUp,
+  Users,
+} from "lucide-react";
+import type { ProductSummary, Review, User } from "../../types";
+import {
+  dashboardApi,
+  type DashboardSummaryResponse,
+  type ProductPerformanceResponse,
+  type SalesPeriodResponse,
+} from "../../services/dashboard-api";
+import { orderApi, type OrderResponse } from "../../services/order-api";
+import { useToast } from "../../contexts/ToastContext";
 
 interface AdminDashboardProps {
-  products: ProductSummary[]
-  orders: Order[]
-  reviews: Review[]
-  users: User[]
+  products: ProductSummary[];
+  orders: OrderResponse[];
+  reviews: Review[];
+  users: User[];
 }
 
-/* ------------------------------------------------------------------ */
-/*  Small reusable pieces – scoped to this page                       */
-/* ------------------------------------------------------------------ */
+type DashboardPeriod = "day" | "week" | "month" | "quarter" | "year";
 
 interface StatCardProps {
-  label: string
-  value: string
-  change: string
-  icon: React.ElementType
-  iconBg: string
+  label: string;
+  value: string;
+  subtext: string;
+  icon: React.ElementType;
+  iconClassName: string;
 }
 
-function StatCard({ label, value, change, icon: Icon, iconBg }: StatCardProps) {
+function StatCard({
+  label,
+  value,
+  subtext,
+  icon: Icon,
+  iconClassName,
+}: StatCardProps) {
   return (
-    <div className="bg-card border border-border rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
-      <div className="flex items-center gap-4">
-        <div className={`flex items-center justify-center w-12 h-12 rounded-xl ${iconBg}`}>
-          <Icon className="w-5 h-5" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+    <div className="rounded-2xl border border-border bg-card p-5 shadow-sm transition-shadow hover:shadow-md">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
             {label}
           </p>
-          <p className="text-2xl font-bold text-foreground leading-tight mt-0.5">{value}</p>
+          <p className="mt-2 text-2xl font-bold leading-tight text-foreground">
+            {value}
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">{subtext}</p>
+        </div>
+        <div
+          className={`flex h-12 w-12 items-center justify-center rounded-2xl ${iconClassName}`}
+        >
+          <Icon className="h-5 w-5" />
         </div>
       </div>
-      <div className="mt-4 flex items-center gap-1 text-xs font-medium text-green-600">
-        <ArrowUpRight className="w-3.5 h-3.5" />
-        {change}
-      </div>
     </div>
-  )
+  );
 }
 
 function SectionCard({
   title,
+  actions,
   children,
-  className = "",
 }: {
-  title: string
-  children: React.ReactNode
-  className?: string
+  title: string;
+  actions?: React.ReactNode;
+  children: React.ReactNode;
 }) {
   return (
-    <div className={`bg-card border border-border rounded-2xl shadow-sm ${className}`}>
-      <div className="px-6 py-4 border-b border-border">
+    <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      <div className="flex items-center justify-between border-b border-border px-6 py-4">
         <h3 className="text-base font-semibold text-foreground">{title}</h3>
+        {actions}
       </div>
       <div className="p-6">{children}</div>
-    </div>
-  )
+    </section>
+  );
 }
 
-function OrderStatusBadge({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    COMPLETED: "bg-green-100 text-green-700",
-    CANCELLED: "bg-red-100 text-red-700",
-    SHIPPING: "bg-blue-100 text-blue-700",
-    PENDING: "bg-yellow-100 text-yellow-700",
-  }
+function EmptyState({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="flex min-h-[220px] flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-background/60 text-center">
+      <p className="text-sm font-semibold text-foreground">{title}</p>
+      <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+    </div>
+  );
+}
 
-  const cls = styles[status] ?? styles.PENDING
+function OrderStatusBadge({ value }: { value: string }) {
+  const styles: Record<string, string> = {
+    COMPLETED: "bg-emerald-100 text-emerald-700",
+    DELIVERED: "bg-teal-100 text-teal-700",
+    SHIPPING: "bg-sky-100 text-sky-700",
+    PREPARING: "bg-amber-100 text-amber-700",
+    CANCELLED: "bg-rose-100 text-rose-700",
+    NOT_RECEIVED: "bg-slate-200 text-slate-700",
+  };
 
   return (
-    <span className={`inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${cls}`}>
-      {status}
+    <span
+      className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+        styles[value] ?? "bg-secondary text-foreground"
+      }`}
+    >
+      {value}
     </span>
-  )
+  );
 }
 
-/* ------------------------------------------------------------------ */
-/*  Helpers                                                            */
-/* ------------------------------------------------------------------ */
-
-function formatCurrency(amount: number): string {
-  return amount.toLocaleString("vi-VN") + "₫"
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(value || 0);
 }
 
-/* ------------------------------------------------------------------ */
-/*  Main component                                                     */
-/* ------------------------------------------------------------------ */
+function formatCompactCurrency(value: number) {
+  if (!value) return "$0";
 
-export default function AdminDashboard({
-  products,
-  orders,
-  reviews,
-  users,
-}: AdminDashboardProps) {
-  const [stats, setStats] = useState<DashboardStats | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const toast = useToast()
-
-  useEffect(() => {
-    loadDashboardStats()
-  }, [])
-
-  const loadDashboardStats = async () => {
-    try {
-      setIsLoading(true)
-      const data = await dashboardApi.getStats()
-      setStats(data)
-    } catch (error) {
-      toast.error("Dashboard error", "Failed to load dashboard statistics")
-    } finally {
-      setIsLoading(false)
-    }
+  if (Math.abs(value) >= 1_000_000_000) {
+    return `$${(value / 1_000_000_000).toFixed(1)}B`;
   }
 
-  /* ---------- derived data ---------- */
+  if (Math.abs(value) >= 1_000_000) {
+    return `$${(value / 1_000_000).toFixed(1)}M`;
+  }
 
-  const totalRevenue = stats?.totalRevenue ?? 0
-  const newOrders = stats?.newOrdersCount ?? 0
-  const newUsers = stats?.newUsersCount ?? 0
+  if (Math.abs(value) >= 1_000) {
+    return `$${(value / 1_000).toFixed(1)}K`;
+  }
+
+  return `$${value}`;
+}
+
+
+function formatPercent(value: number) {
+  const sign = value > 0 ? "+" : "";
+  return `${sign}${value.toFixed(1)}%`;
+}
+
+function formatOrderDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return new Intl.DateTimeFormat("vi-VN", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
+
+export default function AdminDashboard(props: AdminDashboardProps) {
+  const [summary, setSummary] = useState<DashboardSummaryResponse | null>(null);
+  const [recentOrders, setRecentOrders] = useState<OrderResponse[]>(
+    props.orders || []
+  );
+  const [selectedPeriod, setSelectedPeriod] = useState<DashboardPeriod>("month");
+  const [isLoading, setIsLoading] = useState(true);
+  const toast = useToast();
+
+  useEffect(() => {
+    loadDashboard();
+  }, []);
+
+  const loadDashboard = async () => {
+    try {
+      setIsLoading(true);
+
+      const [summaryData, ordersData] = await Promise.all([
+        dashboardApi.getSummary(),
+        orderApi.getAllOrders(),
+      ]);
+
+      setSummary(summaryData);
+      setRecentOrders(ordersData);
+    } catch {
+      toast.error("Dashboard error", "Failed to load dashboard data");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const periodConfig = {
+    day: {
+      label: "Today",
+      sales: summary?.salesToday,
+      topProducts: summary?.topSellingProductsThisMonth ?? [],
+    },
+    week: {
+      label: "This Week",
+      sales: summary?.salesThisWeek,
+      topProducts: summary?.topSellingProductsThisMonth ?? [],
+    },
+    month: {
+      label: "This Month",
+      sales: summary?.salesThisMonth,
+      topProducts: summary?.topSellingProductsThisMonth ?? [],
+    },
+    quarter: {
+      label: "This Quarter",
+      sales: summary?.salesThisQuarter,
+      topProducts: summary?.topSellingProductsThisMonth ?? [],
+    },
+    year: {
+      label: "This Year",
+      sales: summary?.salesThisYear,
+      topProducts: summary?.topSellingProductsThisYear ?? [],
+    },
+  } satisfies Record<
+    DashboardPeriod,
+    {
+      label: string;
+      sales: SalesPeriodResponse | undefined;
+      topProducts: ProductPerformanceResponse[];
+    }
+  >;
+
+  const activePeriod = periodConfig[selectedPeriod];
+  const sales = activePeriod.sales;
+
+  const chartData = useMemo(
+    () =>
+      (sales?.dataPoints ?? []).map((item) => ({
+        label: item.timeLabel,
+        revenue: Number(item.revenue ?? 0),
+      })),
+    [sales]
+  );
+
+  const topProducts = activePeriod.topProducts ?? [];
+
+  const sortedRecentOrders = useMemo(() => {
+    return [...recentOrders]
+      .sort(
+        (a, b) =>
+          new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime()
+      )
+      .slice(0, 6);
+  }, [recentOrders]);
 
   const statCards: StatCardProps[] = [
     {
-      label: "Tổng doanh thu",
-      value: formatCurrency(totalRevenue),
-      change: `${newOrders} đơn trong 30 ngày`,
+      label: `${activePeriod.label} Revenue`,
+      value: formatCurrency(Number(sales?.totalRevenue ?? 0)),
+      subtext: `Previous: ${formatCurrency(
+        Number(sales?.previousPeriodRevenue ?? 0)
+      )}`,
       icon: DollarSign,
-      iconBg: "bg-primary/10 text-primary",
+      iconClassName: "bg-primary/10 text-primary",
     },
     {
-      label: "Đơn hàng mới (30 ngày)",
-      value: newOrders.toString(),
-      change: "Trong 30 ngày qua",
-      icon: ShoppingBag,
-      iconBg: "bg-blue-100 text-blue-600",
-    },
-    {
-      label: "Người dùng mới (30 ngày)",
-      value: newUsers.toString(),
-      change: "Trong 30 ngày qua",
-      icon: Users,
-      iconBg: "bg-green-100 text-green-600",
-    },
-    {
-      label: "Tổng sản phẩm",
-      value: (stats?.topSellingProducts?.length ?? 0).toString(),
-      change: "Sản phẩm đang bán chạy",
+      label: "Revenue Growth",
+      value: formatPercent(Number(sales?.percentageChange ?? 0)),
+      subtext: "Compared with previous period",
       icon: TrendingUp,
-      iconBg: "bg-purple-100 text-purple-600",
+      iconClassName: "bg-emerald-100 text-emerald-700",
     },
-  ]
-
-  const chartData =
-    stats?.revenueOverTime?.map((item) => ({
-      name: item.date,
-      revenue: item.revenue,
-    })) ?? []
-
-  const topProducts = stats?.topSellingProducts ?? []
-
-  /* ---------- loading state ---------- */
+    {
+      label: "Total Customers",
+      value: (summary?.totalCustomers ?? 0).toLocaleString("vi-VN"),
+      subtext: "All registered customers",
+      icon: Users,
+      iconClassName: "bg-sky-100 text-sky-700",
+    },
+    {
+      label: "Total Orders",
+      value: recentOrders.length.toLocaleString("vi-VN"),
+      subtext: "",
+      icon: ShoppingBag,
+      iconClassName: "bg-amber-100 text-amber-700",
+    },
+  ];
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 gap-3">
-        <div className="animate-spin rounded-full h-10 w-10 border-[3px] border-muted border-t-primary" />
-        <p className="text-sm text-muted-foreground">Đang tải dữ liệu…</p>
+      <div className="flex flex-col items-center justify-center gap-3 py-24">
+        <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-muted border-t-primary" />
+        <p className="text-sm text-muted-foreground">Loading dashboard...</p>
       </div>
-    )
+    );
   }
-
-  /* ---------- render ---------- */
 
   return (
     <div className="space-y-6">
-      {/* Page header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Tổng quan hiệu suất cửa hàng
-        </p>
+      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Store performance overview with live data from the dashboard API
+          </p>
+        </div>
+
+        <div className="inline-flex rounded-xl border border-border bg-card p-1 shadow-sm">
+          {(["day", "week", "month", "quarter", "year"] as DashboardPeriod[]).map(
+            (period) => (
+              <button
+                key={period}
+                onClick={() => setSelectedPeriod(period)}
+                className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                  selectedPeriod === period
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                }`}
+              >
+                {periodConfig[period].label}
+              </button>
+            )
+          )}
+        </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-4 gap-4">
-        {statCards.map((stat) => (
-          <StatCard key={stat.label} {...stat} />
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {statCards.map((card) => (
+          <StatCard key={card.label} {...card} />
         ))}
       </div>
 
-      {/* Revenue Chart */}
-      <SectionCard title="Biểu đồ doanh thu theo ngày">
-        {chartData.length > 0 ? (
-          <ResponsiveContainer width="100%" height={320}>
-            <BarChart data={chartData} barSize={32}>
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke="var(--color-border)"
-                vertical={false}
-              />
-              <XAxis
-                dataKey="name"
-                stroke="var(--color-muted-foreground)"
-                tick={{ fontSize: 12 }}
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis
-                stroke="var(--color-muted-foreground)"
-                tick={{ fontSize: 12 }}
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={(v: number) => v.toLocaleString("vi-VN") + "₫"}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "var(--color-card)",
-                  border: "1px solid var(--color-border)",
-                  borderRadius: "0.75rem",
-                  fontSize: 13,
-                }}
-                formatter={(value: number) => [formatCurrency(value), "Doanh thu"]}
-                labelFormatter={(label: string) => `Ngày: ${label}`}
-              />
-              <Legend wrapperStyle={{ fontSize: 13 }} />
-              <Bar
-                dataKey="revenue"
-                fill="var(--color-primary)"
-                name="Doanh thu"
-                radius={[6, 6, 0, 0]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        ) : (
-          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-            <DollarSign className="w-10 h-10 mb-2 opacity-40" />
-            <p className="text-sm">Chưa có dữ liệu doanh thu</p>
-          </div>
-        )}
-      </SectionCard>
-
-      {/* Bottom grid */}
-      <div className="grid grid-cols-2 gap-6">
-        {/* Top Selling Products */}
-        <SectionCard title="Sản phẩm bán chạy nhất">
-          {topProducts.length > 0 ? (
-            <ul className="divide-y divide-border">
-              {topProducts.map((product, index) => (
-                <li
-                  key={product.productId}
-                  className="flex items-center gap-4 py-3 first:pt-0 last:pb-0"
-                >
-                  <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-muted text-xs font-bold text-muted-foreground">
-                    #{index + 1}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">
-                      {product.productName}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Đã bán: {product.totalQuantitySold} sản phẩm
-                    </p>
-                  </div>
-                  <Package className="w-4 h-4 text-muted-foreground/50 shrink-0" />
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
-              <ShoppingBag className="w-10 h-10 mb-2 opacity-40" />
-              <p className="text-sm">Chưa có dữ liệu bán hàng</p>
+      <div className="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
+        <SectionCard
+          title={`Revenue Trend · ${activePeriod.label}`}
+          actions={
+            <div className="flex items-center gap-2 rounded-full bg-secondary px-3 py-1 text-xs text-muted-foreground">
+              <ArrowUpRight className="h-3.5 w-3.5" />
+              {formatPercent(Number(sales?.percentageChange ?? 0))}
             </div>
+          }
+        >
+          {chartData.length > 0 ? (
+            <div className="h-[340px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData} margin={{ left: 8, right: 8 }}>
+                  <defs>
+                    <linearGradient id="dashboardRevenueFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#0f766e" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="#0f766e" stopOpacity={0.03} />
+                    </linearGradient>
+                  </defs>
+
+                  <CartesianGrid
+                    vertical={false}
+                    strokeDasharray="4 4"
+                    stroke="#d6d3d1"
+                  />
+
+                  <XAxis
+                    dataKey="label"
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fontSize: 12, fill: "#78716c" }}
+                  />
+
+                  <YAxis
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fontSize: 12, fill: "#78716c" }}
+                    tickFormatter={(value) => formatCompactCurrency(Number(value))}
+                  />
+
+                  <Tooltip
+                    cursor={{ stroke: "#0f766e", strokeDasharray: "4 4" }}
+                    contentStyle={{
+                      borderRadius: "16px",
+                      border: "1px solid #e7e5e4",
+                      background: "#ffffff",
+                      boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
+                    }}
+                    formatter={(value: number) => [formatCurrency(value), "Revenue"]}
+                    labelFormatter={(label) => `Time: ${label}`}
+                  />
+
+                  <Area
+                    type="monotone"
+                    dataKey="revenue"
+                    stroke="#0f766e"
+                    strokeWidth={3}
+                    fill="url(#dashboardRevenueFill)"
+                    dot={{ r: 3, strokeWidth: 2, fill: "#ffffff" }}
+                    activeDot={{ r: 5, stroke: "#0f766e", strokeWidth: 2 }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <EmptyState
+              title="No revenue data"
+              description="This period does not have chart data yet."
+            />
           )}
         </SectionCard>
 
-        {/* Recent Orders */}
-        <SectionCard title="Đơn hàng gần đây">
-          {orders.length > 0 ? (
-            <ul className="divide-y divide-border">
-              {orders.slice(0, 5).map((order) => (
-                <li
-                  key={order.orderId}
-                  className="flex items-center justify-between py-3 first:pt-0 last:pb-0"
+        <SectionCard title={`Top Selling Products · ${selectedPeriod === "year" ? "Year" : "Month"}`}>
+          {topProducts.length > 0 ? (
+            <div className="h-[340px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={topProducts.map((item) => ({
+                    name:
+                      item.productName.length > 18
+                        ? `${item.productName.slice(0, 18)}...`
+                        : item.productName,
+                    quantity: item.totalQuantitySold,
+                  }))}
+                  layout="vertical"
+                  margin={{ top: 8, right: 12, bottom: 8, left: 12 }}
                 >
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-foreground">
-                      Đơn hàng #{order.orderId}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {order.orderDate}
-                    </p>
-                  </div>
-                  <div className="flex flex-col items-end gap-1 shrink-0 ml-4">
-                    <p className="text-sm font-semibold text-foreground">
-                      {formatCurrency(order.finalAmount)}
-                    </p>
-                    <OrderStatusBadge status={order.status} />
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
-              <ShoppingBag className="w-10 h-10 mb-2 opacity-40" />
-              <p className="text-sm">Chưa có đơn hàng</p>
+                  <CartesianGrid
+                    horizontal={true}
+                    vertical={false}
+                    strokeDasharray="3 3"
+                    stroke="#e7e5e4"
+                  />
+                  <XAxis type="number" hide />
+                  <YAxis
+                    type="category"
+                    dataKey="name"
+                    width={110}
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fontSize: 12, fill: "#57534e" }}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      borderRadius: "16px",
+                      border: "1px solid #e7e5e4",
+                      background: "#ffffff",
+                      boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
+                    }}
+                    formatter={(value: number) => [`${value}`, "Sold"]}
+                  />
+                  <Bar
+                    dataKey="quantity"
+                    radius={[0, 10, 10, 0]}
+                    fill="#f59e0b"
+                    barSize={18}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
+          ) : (
+            <EmptyState
+              title="No top product data"
+              description="The selected range has no product performance yet."
+            />
           )}
         </SectionCard>
       </div>
+
+      <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+        <SectionCard title="Recent Orders">
+          {sortedRecentOrders.length > 0 ? (
+            <div className="space-y-3">
+              {sortedRecentOrders.map((order) => {
+                const statusLabel = order.tracking || order.status;
+
+                return (
+                  <div
+                    key={order.orderId}
+                    className="flex items-center justify-between rounded-2xl border border-border bg-background/60 px-4 py-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-foreground">
+                        Order #{order.orderId}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {formatOrderDate(order.orderDate)}
+                      </p>
+                    </div>
+
+                    <div className="ml-4 flex flex-col items-end gap-2">
+                      <p className="text-sm font-semibold text-foreground">
+                        {formatCurrency(Number(order.finalAmount ?? 0))}
+                      </p>
+                      <OrderStatusBadge value={statusLabel} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <EmptyState
+              title="No recent orders"
+              description="Admin orders API returned no orders."
+            />
+          )}
+        </SectionCard>
+
+        <SectionCard title="Performance Snapshot">
+          <div className="space-y-4">
+            <div className="rounded-2xl bg-background p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                  <DollarSign className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Selected period revenue</p>
+                  <p className="text-lg font-bold text-foreground">
+                    {formatCurrency(Number(sales?.totalRevenue ?? 0))}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl bg-background p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
+                  <Package className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Top products shown</p>
+                  <p className="text-lg font-bold text-foreground">
+                    {topProducts.length.toLocaleString("vi-VN")}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl bg-background p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+                  <TrendingUp className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Growth vs previous period</p>
+                  <p className="text-lg font-bold text-foreground">
+                    {formatPercent(Number(sales?.percentageChange ?? 0))}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl bg-background p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-100 text-sky-700">
+                  <Users className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Customer base</p>
+                  <p className="text-lg font-bold text-foreground">
+                    {(summary?.totalCustomers ?? 0).toLocaleString("vi-VN")}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </SectionCard>
+      </div>
     </div>
-  )
+  );
 }

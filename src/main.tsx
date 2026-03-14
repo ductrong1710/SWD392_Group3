@@ -5,9 +5,7 @@ import { ToastProvider } from "./contexts/ToastContext";
 import "./index.css";
 
 createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <ToastProvider>
-      <App />
-    </ToastProvider>
-  </StrictMode>
+ <ToastProvider>
+  <App />
+</ToastProvider>
 );

@@ -186,42 +186,6 @@ export interface UpdateCartItemRequest {
 }
 
 // ============================================
-// ORDER ITEM (khớp OrderItemResponseDto.java)
-// ============================================
-export interface OrderItem {
-  productVariantId: number;
-  productName: string;
-  imageUrl: string;
-  color: string;
-  size: string;
-  quantity: number;
-  priceAtPurchase: number;
-}
-
-// ============================================
-// ORDER (khớp OrderResponseDto.java)
-// ============================================
-export type OrderStatus =
-  | "PREPARING"
-  | "SHIPPING"
-  | "DELIVERED"
-  | "COMPLETED"
-  | "NOT_RECEIVED"
-  | "CANCELLED";
-
-export interface Order {
-  orderId: number;
-  status: OrderStatus;
-  orderDate: string;
-  shippingAddressJson: string;
-  totalAmount: number;
-  discountAmount: number;
-  finalAmount: number;
-  items: OrderItem[];
-  paymentMethod: string;
-}
-
-// ============================================
 // CHECKOUT (khớp CheckoutResponse.java)
 // ============================================
 export interface CheckoutRequest {

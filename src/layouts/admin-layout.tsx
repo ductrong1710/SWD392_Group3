@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect } from "react";
+import type { OrderResponse } from "../services/order-api";
 import type {
   UserRole,
   PageType,
   ProductSummary,
-  Order,
   Review,
   User,
 } from "../types";
@@ -28,8 +28,8 @@ interface AdminLayoutProps {
   onLogout: () => void;
   products: ProductSummary[];
   setProducts: (products: ProductSummary[]) => void;
-  orders: Order[];
-  setOrders: (orders: Order[]) => void;
+  orders: OrderResponse[];
+  setOrders: (orders: OrderResponse[]) => void;
   reviews: Review[];
   setReviews: (reviews: Review[]) => void;
   users: User[];
@@ -37,8 +37,6 @@ interface AdminLayoutProps {
 }
 
 export default function AdminLayout({
-  role,
-  setRole,
   currentPage,
   setCurrentPage,
   onLogout,

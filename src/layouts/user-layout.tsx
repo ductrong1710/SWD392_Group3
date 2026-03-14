@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, Dispatch, SetStateAction } from "react";
+import type { OrderResponse } from "../services/order-api";
 import type {
   CartItem,
-  Order,
   ProductSummary,
   PageType,
   UserRole,
@@ -26,8 +26,8 @@ interface UserLayoutProps {
   onLogout: () => void;
   cart: CartItem[];
   setCart: (cart: CartItem[]) => void;
-  orders: Order[];
-  setOrders: (orders: Order[]) => void;
+  orders: OrderResponse[];
+  setOrders: (orders: OrderResponse[]) => void;
   products: ProductSummary[];
   selectedCategory: string | null;
   setSelectedCategory: (category: string | null) => void;
@@ -40,7 +40,6 @@ interface UserLayoutProps {
 export default function UserLayout({
   currentPage,
   setCurrentPage,
-  setRole,
   onLogout,
   cart,
   setCart,
@@ -58,13 +57,15 @@ export default function UserLayout({
     window.scrollTo(0, 0);
   }, [currentPage, selectedCategory]);
 
+  const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <UserHeader
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
-        onLogout={onLogout}  
-        cartCount={cart.length}
+        onLogout={onLogout}
+        cartCount={cartCount}
       />
       <main className="flex-1 pt-16">
         {currentPage === "home" && (
@@ -73,6 +74,7 @@ export default function UserLayout({
             setSelectedCategory={setSelectedCategory}
           />
         )}
+
         {currentPage === "products" && (
           <UserProducts
             products={products}
@@ -84,15 +86,15 @@ export default function UserLayout({
             setSelectedProductId={setSelectedProductId}
           />
         )}
+
         {currentPage === "product-detail" && selectedProductId && (
           <UserProductDetail
             productId={Number(selectedProductId)}
             onClose={() => setCurrentPage("products")}
-            onAddToCart={() => {
-              // Refresh cart or show notification
-            }}
+            onAddToCart={async () => {}}
           />
         )}
+
         {currentPage === "cart" && (
           <UserCart
             cart={cart}
@@ -100,6 +102,7 @@ export default function UserLayout({
             setCurrentPage={setCurrentPage}
           />
         )}
+
         {currentPage === "checkout" && (
           <UserCheckout
             cart={cart}
@@ -108,13 +111,16 @@ export default function UserLayout({
             setCurrentPage={setCurrentPage}
           />
         )}
+
         {currentPage === "orders" && (
           <UserOrders orders={orders} setSelectedOrderId={setSelectedOrderId} />
         )}
+
         {currentPage === "profile" && (
           <UserProfilePage onBack={() => setCurrentPage("home")} />
         )}
       </main>
+
       <Footer />
       <ChatbotWidget role="user" />
     </div>

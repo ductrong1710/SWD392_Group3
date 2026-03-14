@@ -1,30 +1,25 @@
 "use client";
 
 import { useEffect } from "react";
-import CategoryManagement from "../pages/admin/CategoryManagement";
 import { Package, ShoppingCart, LogOut, List } from "lucide-react";
-
+import type { OrderResponse } from "../services/order-api";
 import type {
-  UserRole,
   PageType,
   ProductSummary,
-  Order,
 } from "../types";
-
-// Staff có chức năng CRUD sản phẩm và đơn hàng, nên ta có thể dùng lại component của admin.
+import CategoryManagement from "../pages/admin/CategoryManagement";
 import AdminProducts from "../pages/admin/admin-products";
 import AdminOrders from "../pages/admin/admin-orders";
 import ChatbotWidget from "../component/common/chatbot-widget";
 
-// Props được đơn giản hóa vì staff chỉ quản lý sản phẩm và đơn hàng.
 interface StaffLayoutProps {
   currentPage: PageType;
   setCurrentPage: (page: PageType) => void;
   onLogout: () => void;
   products: ProductSummary[];
   setProducts: (products: ProductSummary[]) => void;
-  orders: Order[];
-  setOrders: (orders: Order[]) => void;
+  orders: OrderResponse[];
+  setOrders: (orders: OrderResponse[]) => void;
 }
 
 const navItems = [
@@ -33,12 +28,16 @@ const navItems = [
     label: "Products",
     icon: Package,
   },
-  { 
-    page: "staff-categories" as PageType, 
-    label: "Categories", 
-    icon: List 
+  {
+    page: "staff-categories" as PageType,
+    label: "Categories",
+    icon: List,
   },
-  { page: "staff-orders" as PageType, label: "Orders", icon: ShoppingCart },
+  {
+    page: "staff-orders" as PageType,
+    label: "Orders",
+    icon: ShoppingCart,
+  },
 ];
 
 export default function StaffLayout({
@@ -56,7 +55,6 @@ export default function StaffLayout({
 
   return (
     <div className="flex min-h-screen bg-secondary/50">
-      {/* Sidebar */}
       <aside className="w-64 flex-shrink-0 bg-card border-r border-border p-6 flex flex-col">
         <h1 className="text-2xl font-bold text-primary mb-10">Staff Panel</h1>
         <nav className="flex flex-col gap-2">
@@ -86,11 +84,13 @@ export default function StaffLayout({
         </div>
       </aside>
 
-      {/* Main Content */}
       <main className="flex-1 p-8 overflow-auto">
-        {/* Staff có thể quản lý sản phẩm và đơn hàng, nên ta dùng lại component của admin */}
-        {currentPage === "staff-products" && <AdminProducts products={products} setProducts={setProducts} />}
-        {currentPage === "staff-orders" && <AdminOrders orders={orders} setOrders={setOrders} />}
+        {currentPage === "staff-products" && (
+          <AdminProducts products={products} setProducts={setProducts} />
+        )}
+        {currentPage === "staff-orders" && (
+          <AdminOrders orders={orders} setOrders={setOrders} />
+        )}
         {currentPage === "staff-categories" && <CategoryManagement />}
       </main>
 

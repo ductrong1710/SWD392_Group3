@@ -3,15 +3,15 @@
 import { useEffect, useState } from "react";
 import { CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { checkoutApi } from "../../services/checkout-api";
-import { ordersApi } from "../../services/order-api";
+import { ordersApi, type OrderResponse } from "../../services/order-api";
 import { useToast } from "../../contexts/ToastContext";
 import type { Dispatch, SetStateAction } from "react";
-import type { PageType, Order } from "../../types";
+import type { CartItem, PageType } from "../../types";
 
 interface PaymentResultProps {
   setCurrentPage: Dispatch<SetStateAction<PageType>>;
-  setCart: (cart: never[]) => void;
-  setOrders: (orders: Order[]) => void;
+  setCart: (cart: CartItem[]) => void;
+  setOrders: (orders: OrderResponse[]) => void;
   setSelectedOrderId: (id: string | null) => void;
 }
 
@@ -32,38 +32,31 @@ export default function PaymentResult({
 
   const verifyPayment = async () => {
     try {
-      // Bước 3: Đọc tất cả tham số VNPAY từ URL
       const params = new URLSearchParams(window.location.search);
       const vnpayParams: Record<string, string> = {};
       params.forEach((value, key) => {
         vnpayParams[key] = value;
       });
 
-      // Kiểm tra có params VNPAY không
       if (!vnpayParams["vnp_ResponseCode"]) {
         setStatus("failed");
         setMessage("No payment information found");
         return;
       }
 
-      // Bước 4: Gửi POST đến backend để xác thực
       const result = await checkoutApi.verifyVnpay(vnpayParams);
 
-      // Bước 6: Xử lý kết quả
       if (result.success) {
         setStatus("success");
         setOrderId(result.orderId);
         toast.success("Payment successful!", "Your order has been confirmed");
 
-        // Clear cart và load lại orders
         setCart([]);
         const updatedOrders = await ordersApi.getMyOrders();
         setOrders(updatedOrders);
 
-        // Xóa query params khỏi URL
         window.history.replaceState({}, "", window.location.pathname + "#/payment-result");
 
-        // Chuyển đến trang orders sau 3 giây
         setTimeout(() => {
           if (result.orderId) {
             setSelectedOrderId(String(result.orderId));
@@ -76,7 +69,7 @@ export default function PaymentResult({
         setMessage(result.message || "Payment verification failed");
         toast.error("Payment failed", result.message || "Please try again");
       }
-    } catch (error) {
+    } catch {
       setStatus("failed");
       setMessage("Could not verify payment. Please contact support.");
       toast.error("Verification error", "Could not verify your payment");
@@ -127,9 +120,7 @@ export default function PaymentResult({
           <h2 className="text-2xl font-serif font-semibold mt-6 mb-2">
             Payment Failed
           </h2>
-          <p className="text-muted-foreground mb-2">
-            {message}
-          </p>
+          <p className="text-muted-foreground mb-2">{message}</p>
           {orderId && (
             <p className="text-sm text-muted-foreground mb-6">
               Order ID: <span className="font-semibold">#{orderId}</span>

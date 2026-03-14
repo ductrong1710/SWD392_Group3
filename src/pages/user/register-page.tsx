@@ -7,11 +7,19 @@ import { useToast } from "../../contexts/ToastContext";
 import SignUpImg from "../../assets/img/SignUpImg.jpg";
 
 interface RegisterPageProps {
-  onRegister: (data: { fullName: string; email: string; password: string; phone: string }) => Promise<boolean>;
+  onRegister: (data: {
+    fullName: string;
+    email: string;
+    password: string;
+    phone: string;
+  }) => Promise<boolean>;
   onSwitchToLogin: () => void;
 }
 
-export default function RegisterPage({ onRegister, onSwitchToLogin }: RegisterPageProps) {
+export default function RegisterPage({
+  onRegister,
+  onSwitchToLogin,
+}: RegisterPageProps) {
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -27,43 +35,54 @@ export default function RegisterPage({ onRegister, onSwitchToLogin }: RegisterPa
     e.preventDefault();
     setError("");
 
+    if (!formData.fullName.trim() || !formData.email.trim() || !formData.phone.trim()) {
+      setError("Please fill in all required fields.");
+      toast.error("Missing information", "Please fill in all required fields.");
+      return;
+    }
+
     if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match");
-      toast.error("Password mismatch", "Passwords do not match");
+      setError("Passwords do not match.");
+      toast.error("Password mismatch", "Passwords do not match.");
       return;
     }
 
     if (formData.password.length < 6) {
-      setError("Password must be at least 6 characters");
-      toast.warning("Weak password", "Password must be at least 6 characters");
+      setError("Password must be at least 6 characters.");
+      toast.warning("Weak password", "Password must be at least 6 characters.");
       return;
     }
 
-    setIsLoading(true);
-    const success = await onRegister({
-      fullName: formData.fullName,
-      email: formData.email,
-      password: formData.password,
-      phone: formData.phone,
-    });
+    try {
+      setIsLoading(true);
 
-    if (success) {
-      toast.success("Account created!", "Please sign in with your new account");
-    } else {
-      setError("Registration failed. Email might already be in use.");
-      toast.error("Registration failed", "Email might already be in use");
+      const success = await onRegister({
+        fullName: formData.fullName.trim(),
+        email: formData.email.trim(),
+        password: formData.password,
+        phone: formData.phone.trim(),
+      });
+
+      if (success) {
+        toast.success("Account created", "Your account has been created successfully.");
+      } else {
+        setError("Registration failed. Email may already be in use.");
+        toast.error("Registration failed", "Email may already be in use.");
+      }
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   return (
     <div className="min-h-screen bg-background text-foreground flex">
-      {/* Left Side - Register Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center px-8 py-12">
         <div className="w-full max-w-md">
           <div className="mb-8">
-            <h2 className="text-3xl font-bold mb-2">Join STYLE.</h2>
-            <p className="text-muted-foreground">Create your account and start shopping</p>
+            <h2 className="text-3xl font-bold mb-2">Create Your Account</h2>
+            <p className="text-muted-foreground">
+              Join STYLE and start exploring curated fashion picks.
+            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -73,7 +92,6 @@ export default function RegisterPage({ onRegister, onSwitchToLogin }: RegisterPa
               </div>
             )}
 
-            {/* Full Name */}
             <div>
               <label className="block text-sm font-medium mb-2">Full Name</label>
               <div className="relative">
@@ -89,7 +107,6 @@ export default function RegisterPage({ onRegister, onSwitchToLogin }: RegisterPa
               </div>
             </div>
 
-            {/* Email */}
             <div>
               <label className="block text-sm font-medium mb-2">Email</label>
               <div className="relative">
@@ -98,14 +115,13 @@ export default function RegisterPage({ onRegister, onSwitchToLogin }: RegisterPa
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="your@email.com"
+                  placeholder="you@example.com"
                   className="w-full pl-10 pr-4 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-accent"
                   required
                 />
               </div>
             </div>
 
-            {/* Phone */}
             <div>
               <label className="block text-sm font-medium mb-2">Phone Number</label>
               <div className="relative">
@@ -121,7 +137,6 @@ export default function RegisterPage({ onRegister, onSwitchToLogin }: RegisterPa
               </div>
             </div>
 
-            {/* Password */}
             <div>
               <label className="block text-sm font-medium mb-2">Password</label>
               <div className="relative">
@@ -130,14 +145,13 @@ export default function RegisterPage({ onRegister, onSwitchToLogin }: RegisterPa
                   type="password"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  placeholder="••••••••"
+                  placeholder="Enter your password"
                   className="w-full pl-10 pr-4 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-accent"
                   required
                 />
               </div>
             </div>
 
-            {/* Confirm Password */}
             <div>
               <label className="block text-sm font-medium mb-2">Confirm Password</label>
               <div className="relative">
@@ -145,57 +159,57 @@ export default function RegisterPage({ onRegister, onSwitchToLogin }: RegisterPa
                 <input
                   type="password"
                   value={formData.confirmPassword}
-                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                  placeholder="••••••••"
+                  onChange={(e) =>
+                    setFormData({ ...formData, confirmPassword: e.target.value })
+                  }
+                  placeholder="Re-enter your password"
                   className="w-full pl-10 pr-4 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-accent"
                   required
                 />
               </div>
             </div>
 
-            {/* Submit Button */}
             <button
               type="submit"
               disabled={isLoading}
               className="w-full py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
             >
-              {isLoading ? "Creating Account..." : "Sign Up"}
+              {isLoading ? "Creating account..." : "Sign Up"}
             </button>
-          </form>
-        </div>
-      </div>
 
-      {/* Right Side - Brand & Image */}
-      <div 
-        className="hidden lg:flex lg:w-1/2 bg-cover bg-center relative"
-        style={{ backgroundImage: `url(${SignUpImg})` }}
-      >
-        {/* Gradient Overlay - darker on the right */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/20 via-black/40 to-black/60"></div>
-        
-        {/* Content */}
-        <div className="relative z-10 flex flex-col justify-between w-full px-12 py-4 text-white">
-          {/* Top - Brand Section */}
-          <div className="text-right pt-12">
-            <h1 className="text-6xl font-serif font-bold mb-6 tracking-wider">STYLE.</h1>
-            <p className="text-xl font-light mb-2">Begin Your Fashion Journey</p>
-            <p className="text-sm opacity-90 max-w-lg ml-auto leading-relaxed">
-              Join thousands of fashion enthusiasts. Get access to exclusive deals, 
-              personalized recommendations, and be the first to know about new arrivals.
-            </p>
-          </div>
-
-          {/* Bottom - Login Link */}
-          <div className="space-y-4 text-center pb-24">
-            <p className="text-sm">
+            <p className="text-sm text-center text-muted-foreground">
               Already have an account?{" "}
               <button
                 type="button"
                 onClick={onSwitchToLogin}
-                className="font-semibold underline hover:opacity-80 transition-opacity"
+                className="font-semibold text-foreground underline hover:opacity-80"
               >
                 Sign in
               </button>
+            </p>
+          </form>
+        </div>
+      </div>
+
+      <div
+        className="hidden lg:flex lg:w-1/2 bg-cover bg-center relative"
+        style={{ backgroundImage: `url(${SignUpImg})` }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-r from-black/20 via-black/40 to-black/60"></div>
+
+        <div className="relative z-10 flex flex-col justify-between w-full px-12 py-10 text-white">
+          <div className="text-right pt-12">
+            <h1 className="text-6xl font-serif font-bold mb-6 tracking-wider">STYLE.</h1>
+            <p className="text-xl font-light mb-2">Create Your Fashion Identity</p>
+            <p className="text-sm opacity-90 max-w-lg ml-auto leading-relaxed">
+              Sign up to discover new arrivals, personalized recommendations,
+              and exclusive offers curated for your style.
+            </p>
+          </div>
+
+          <div className="text-right pb-10">
+            <p className="text-sm opacity-90">
+              Fast signup. Instant access. Seamless shopping.
             </p>
           </div>
         </div>

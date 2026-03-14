@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
+import { useEffect, useState } from "react";
 import {
   BarChart,
   Bar,
@@ -10,29 +10,26 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-} from "recharts"
-import { TrendingUp, ShoppingBag, Users, DollarSign, Package, ArrowUpRight } from "lucide-react"
-import type { ProductSummary, Order, Review, User, DashboardStats } from "../../types"
-import { dashboardApi } from "../../services/dashboard-api"
-import { useToast } from "../../contexts/ToastContext"
+} from "recharts";
+import { TrendingUp, ShoppingBag, Users, DollarSign, Package, ArrowUpRight } from "lucide-react";
+import type { OrderResponse } from "../../services/order-api";
+import type { ProductSummary, Review, User, DashboardStats } from "../../types";
+import { dashboardApi } from "../../services/dashboard-api";
+import { useToast } from "../../contexts/ToastContext";
 
 interface AdminDashboardProps {
-  products: ProductSummary[]
-  orders: Order[]
-  reviews: Review[]
-  users: User[]
+  products: ProductSummary[];
+  orders: OrderResponse[];
+  reviews: Review[];
+  users: User[];
 }
 
-/* ------------------------------------------------------------------ */
-/*  Small reusable pieces – scoped to this page                       */
-/* ------------------------------------------------------------------ */
-
 interface StatCardProps {
-  label: string
-  value: string
-  change: string
-  icon: React.ElementType
-  iconBg: string
+  label: string;
+  value: string;
+  change: string;
+  icon: React.ElementType;
+  iconBg: string;
 }
 
 function StatCard({ label, value, change, icon: Icon, iconBg }: StatCardProps) {
@@ -54,7 +51,7 @@ function StatCard({ label, value, change, icon: Icon, iconBg }: StatCardProps) {
         {change}
       </div>
     </div>
-  )
+  );
 }
 
 function SectionCard({
@@ -62,9 +59,9 @@ function SectionCard({
   children,
   className = "",
 }: {
-  title: string
-  children: React.ReactNode
-  className?: string
+  title: string;
+  children: React.ReactNode;
+  className?: string;
 }) {
   return (
     <div className={`bg-card border border-border rounded-2xl shadow-sm ${className}`}>
@@ -73,7 +70,7 @@ function SectionCard({
       </div>
       <div className="p-6">{children}</div>
     </div>
-  )
+  );
 }
 
 function OrderStatusBadge({ status }: { status: string }) {
@@ -82,28 +79,20 @@ function OrderStatusBadge({ status }: { status: string }) {
     CANCELLED: "bg-red-100 text-red-700",
     SHIPPING: "bg-blue-100 text-blue-700",
     PENDING: "bg-yellow-100 text-yellow-700",
-  }
+  };
 
-  const cls = styles[status] ?? styles.PENDING
+  const cls = styles[status] ?? styles.PENDING;
 
   return (
     <span className={`inline-block text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${cls}`}>
       {status}
     </span>
-  )
+  );
 }
-
-/* ------------------------------------------------------------------ */
-/*  Helpers                                                            */
-/* ------------------------------------------------------------------ */
 
 function formatCurrency(amount: number): string {
-  return amount.toLocaleString("vi-VN") + "₫"
+  return amount.toLocaleString("vi-VN") + "₫";
 }
-
-/* ------------------------------------------------------------------ */
-/*  Main component                                                     */
-/* ------------------------------------------------------------------ */
 
 export default function AdminDashboard({
   products,
@@ -111,31 +100,29 @@ export default function AdminDashboard({
   reviews,
   users,
 }: AdminDashboardProps) {
-  const [stats, setStats] = useState<DashboardStats | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const toast = useToast()
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const toast = useToast();
 
   useEffect(() => {
-    loadDashboardStats()
-  }, [])
+    loadDashboardStats();
+  }, []);
 
   const loadDashboardStats = async () => {
     try {
-      setIsLoading(true)
-      const data = await dashboardApi.getStats()
-      setStats(data)
-    } catch (error) {
-      toast.error("Dashboard error", "Failed to load dashboard statistics")
+      setIsLoading(true);
+      const data = await dashboardApi.getStats();
+      setStats(data);
+    } catch {
+      toast.error("Dashboard error", "Failed to load dashboard statistics");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
-  /* ---------- derived data ---------- */
-
-  const totalRevenue = stats?.totalRevenue ?? 0
-  const newOrders = stats?.newOrdersCount ?? 0
-  const newUsers = stats?.newUsersCount ?? 0
+  const totalRevenue = stats?.totalRevenue ?? 0;
+  const newOrders = stats?.newOrdersCount ?? 0;
+  const newUsers = stats?.newUsersCount ?? 0;
 
   const statCards: StatCardProps[] = [
     {
@@ -166,17 +153,15 @@ export default function AdminDashboard({
       icon: TrendingUp,
       iconBg: "bg-purple-100 text-purple-600",
     },
-  ]
+  ];
 
   const chartData =
     stats?.revenueOverTime?.map((item) => ({
       name: item.date,
       revenue: item.revenue,
-    })) ?? []
+    })) ?? [];
 
-  const topProducts = stats?.topSellingProducts ?? []
-
-  /* ---------- loading state ---------- */
+  const topProducts = stats?.topSellingProducts ?? [];
 
   if (isLoading) {
     return (
@@ -184,14 +169,11 @@ export default function AdminDashboard({
         <div className="animate-spin rounded-full h-10 w-10 border-[3px] border-muted border-t-primary" />
         <p className="text-sm text-muted-foreground">Đang tải dữ liệu…</p>
       </div>
-    )
+    );
   }
-
-  /* ---------- render ---------- */
 
   return (
     <div className="space-y-6">
-      {/* Page header */}
       <div>
         <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
         <p className="text-sm text-muted-foreground mt-1">
@@ -199,14 +181,12 @@ export default function AdminDashboard({
         </p>
       </div>
 
-      {/* Stats Grid */}
       <div className="grid grid-cols-4 gap-4">
         {statCards.map((stat) => (
           <StatCard key={stat.label} {...stat} />
         ))}
       </div>
 
-      {/* Revenue Chart */}
       <SectionCard title="Biểu đồ doanh thu theo ngày">
         {chartData.length > 0 ? (
           <ResponsiveContainer width="100%" height={320}>
@@ -257,9 +237,7 @@ export default function AdminDashboard({
         )}
       </SectionCard>
 
-      {/* Bottom grid */}
       <div className="grid grid-cols-2 gap-6">
-        {/* Top Selling Products */}
         <SectionCard title="Sản phẩm bán chạy nhất">
           {topProducts.length > 0 ? (
             <ul className="divide-y divide-border">
@@ -291,7 +269,6 @@ export default function AdminDashboard({
           )}
         </SectionCard>
 
-        {/* Recent Orders */}
         <SectionCard title="Đơn hàng gần đây">
           {orders.length > 0 ? (
             <ul className="divide-y divide-border">
@@ -326,5 +303,5 @@ export default function AdminDashboard({
         </SectionCard>
       </div>
     </div>
-  )
+  );
 }

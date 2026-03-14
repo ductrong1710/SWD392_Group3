@@ -10,10 +10,14 @@ import type { ProductDetail, ProductVariant } from "../../types";
 interface ProductDetailProps {
   productId: number | null;
   onClose: () => void;
-  onAddToCart?: () => void;
+  onAddToCart?: () => Promise<void> | void;
 }
 
-export default function UserProductDetail({ productId, onClose, onAddToCart }: ProductDetailProps) {
+export default function UserProductDetail({
+  productId,
+  onClose,
+  onAddToCart,
+}: ProductDetailProps) {
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [selectedColor, setSelectedColor] = useState<string>("");
   const [selectedSize, setSelectedSize] = useState<string>("");
@@ -36,21 +40,25 @@ export default function UserProductDetail({ productId, onClose, onAddToCart }: P
       setIsLoading(true);
       const data = await productsApi.getById(productId);
       setProduct(data);
+
       if (data.productVariants.length > 0) {
         const colors = [...new Set(data.productVariants.map((v) => v.color))];
         if (colors.length > 0) {
           const firstColor = colors[0];
           setSelectedColor(firstColor);
+
           const sizesForColor = data.productVariants
             .filter((v) => v.color === firstColor)
             .map((v) => v.size);
+
           if (sizesForColor.length > 0) {
             setSelectedSize(sizesForColor[0]);
           }
         }
       }
+
       setError("");
-    } catch (err) {
+    } catch {
       setError("Failed to load product");
       toast.error("Loading failed", "Could not load product details");
     } finally {
@@ -72,7 +80,7 @@ export default function UserProductDetail({ productId, onClose, onAddToCart }: P
         setSelectedSize(availableSizes[0]);
       }
     }
-  }, [selectedColor, product]);
+  }, [selectedColor, product, selectedSize]);
 
   const getSelectedVariant = (): ProductVariant | undefined => {
     return product?.productVariants.find(
@@ -88,21 +96,30 @@ export default function UserProductDetail({ productId, onClose, onAddToCart }: P
     }
 
     if (variant.stockQuantity < quantity) {
-      toast.error("Insufficient stock", `Only ${variant.stockQuantity} item(s) available`);
+      toast.error(
+        "Insufficient stock",
+        `Only ${variant.stockQuantity} item(s) available`
+      );
       return;
     }
 
     try {
       setIsAddingToCart(true);
+
       await cartApi.addItem({
         productVariantId: variant.id,
-        quantity: quantity,
+        quantity,
       });
+
+      await onAddToCart?.();
+
       toast.success("Added to cart", `${quantity} item(s) added to your cart`);
-      onAddToCart?.();
       onClose();
-    } catch (err) {
-      toast.error("Failed to add", "Could not add item to cart. Please try again.");
+    } catch {
+      toast.error(
+        "Failed to add",
+        "Could not add item to cart. Please try again."
+      );
     } finally {
       setIsAddingToCart(false);
     }
@@ -137,7 +154,9 @@ export default function UserProductDetail({ productId, onClose, onAddToCart }: P
           </div>
         ) : !product.isActive ? (
           <div className="p-12 text-center">
-            <p className="text-destructive mb-4">Product is currently unavailable</p>
+            <p className="text-destructive mb-4">
+              Product is currently unavailable
+            </p>
             <button
               onClick={onClose}
               className="px-4 py-2 bg-primary text-primary-foreground rounded-lg"
@@ -147,12 +166,14 @@ export default function UserProductDetail({ productId, onClose, onAddToCart }: P
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-6">
-            {/* Product Images */}
             <div>
               <div className="bg-secondary rounded-lg aspect-square flex items-center justify-center overflow-hidden mb-4">
                 {product.productImages.length > 0 && product.productImages[0].imageUrl ? (
                   <img
-                    src={product.productImages.find(img => img.isThumbnail)?.imageUrl || product.productImages[0].imageUrl}
+                    src={
+                      product.productImages.find((img) => img.isThumbnail)?.imageUrl ||
+                      product.productImages[0].imageUrl
+                    }
                     alt={product.name}
                     className="w-full h-full object-cover"
                   />
@@ -164,7 +185,10 @@ export default function UserProductDetail({ productId, onClose, onAddToCart }: P
               {product.productImages.length > 1 && (
                 <div className="grid grid-cols-4 gap-2">
                   {product.productImages.slice(0, 4).map((img) => (
-                    <div key={img.id} className="bg-secondary rounded aspect-square overflow-hidden">
+                    <div
+                      key={img.id}
+                      className="bg-secondary rounded aspect-square overflow-hidden"
+                    >
                       <img
                         src={img.imageUrl}
                         alt={product.name}
@@ -176,7 +200,6 @@ export default function UserProductDetail({ productId, onClose, onAddToCart }: P
               )}
             </div>
 
-            {/* Product Info */}
             <div>
               <div className="mb-2">
                 <span className="text-sm text-muted-foreground">{product.brandName}</span>
@@ -198,9 +221,13 @@ export default function UserProductDetail({ productId, onClose, onAddToCart }: P
                       onChange={(e) => setSelectedColor(e.target.value)}
                       className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background"
                     >
-                      {[...new Set(product.productVariants.map(v => v.color))].map((color) => (
-                        <option key={color} value={color}>{color}</option>
-                      ))}
+                      {[...new Set(product.productVariants.map((v) => v.color))].map(
+                        (color) => (
+                          <option key={color} value={color}>
+                            {color}
+                          </option>
+                        )
+                      )}
                     </select>
                   </div>
 
@@ -212,7 +239,9 @@ export default function UserProductDetail({ productId, onClose, onAddToCart }: P
                       className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background"
                     >
                       {getAvailableSizes().map((size) => (
-                        <option key={size} value={size}>{size}</option>
+                        <option key={size} value={size}>
+                          {size}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -220,7 +249,13 @@ export default function UserProductDetail({ productId, onClose, onAddToCart }: P
               )}
 
               {getSelectedVariant() && (
-                <p className={`text-sm mb-4 ${getSelectedVariant()!.stockQuantity > 0 ? "text-green-600" : "text-destructive"}`}>
+                <p
+                  className={`text-sm mb-4 ${
+                    getSelectedVariant()!.stockQuantity > 0
+                      ? "text-green-600"
+                      : "text-destructive"
+                  }`}
+                >
                   {getSelectedVariant()!.stockQuantity > 0
                     ? `${getSelectedVariant()!.stockQuantity} in stock`
                     : "Out of stock"}
@@ -238,7 +273,11 @@ export default function UserProductDetail({ productId, onClose, onAddToCart }: P
                   </button>
                   <span className="w-12 text-center font-medium">{quantity}</span>
                   <button
-                    onClick={() => setQuantity(Math.min(getSelectedVariant()?.stockQuantity || 999, quantity + 1))}
+                    onClick={() =>
+                      setQuantity(
+                        Math.min(getSelectedVariant()?.stockQuantity || 999, quantity + 1)
+                      )
+                    }
                     className="p-2 hover:bg-secondary transition-colors"
                   >
                     <Plus className="w-4 h-4" />

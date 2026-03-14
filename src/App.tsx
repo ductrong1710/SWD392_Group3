@@ -10,18 +10,16 @@ import StaffLayout from "./layouts/staff-layout";
 import PaymentResult from "./pages/user/payment-result";
 import { setToken, getToken, removeToken } from "./services/base-api";
 import { authApi } from "./services/auth-api";
-import type { OrderResponseDto } from "./services/order-api"; 
+import type { OrderResponse } from "./services/order-api";
 import type {
   UserRole,
   PageType,
   CartItem,
-  Order,
   Review,
   User,
   ProductSummary,
 } from "./types";
 
-// Helper: build state object for history
 function buildHistoryState(
   page: PageType,
   extras?: Record<string, string | null>
@@ -29,7 +27,6 @@ function buildHistoryState(
   return { page, ...extras };
 }
 
-// Helper: build URL hash from page
 function pageToHash(
   page: PageType,
   extras?: Record<string, string | null>
@@ -91,7 +88,6 @@ function parseHash(hash: string): {
   return { page, selectedCategory, selectedProductId, selectedOrderId };
 }
 
-// ===== Detect VNPAY return TRƯỚC khi render (synchronous) =====
 function isVnpayReturn(): boolean {
   const params = new URLSearchParams(window.location.search);
   const pathname = window.location.pathname;
@@ -99,22 +95,17 @@ function isVnpayReturn(): boolean {
 }
 
 export default function App() {
-  // Disable browser scroll restoration
   useEffect(() => {
     if ("scrollRestoration" in window.history) {
       window.history.scrollRestoration = "manual";
     }
   }, []);
 
-  const initialState = parseHash(window.location.hash);
-
-  // ===== Detect VNPAY ngay trong useState initializer =====
   const [paymentReturn] = useState<boolean>(() => isVnpayReturn());
 
   const [role, setRole] = useState<UserRole>(() => {
     const token = getToken();
     if (!token) {
-      // Không có token → chắc chắn là guest, xóa luôn role cũ
       localStorage.removeItem("role");
       localStorage.removeItem("userRole");
       return "guest";
@@ -123,7 +114,6 @@ export default function App() {
     return (saved as UserRole) || "guest";
   });
 
-  // Nếu là VNPAY return → khởi tạo luôn "payment-result", không phải "home"
   const [currentPage, setCurrentPage] = useState<PageType>(() => {
     if (paymentReturn && getToken()) {
       return "payment-result";
@@ -132,7 +122,7 @@ export default function App() {
   });
 
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [orders, setOrders] = useState<OrderResponseDto[]>([]);  
+  const [orders, setOrders] = useState<OrderResponse[]>([]);
   const [products, setProducts] = useState<ProductSummary[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -143,9 +133,6 @@ export default function App() {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [isPopState, setIsPopState] = useState(false);
 
-  // ===== XÓA useEffect detect VNPAY cũ — đã dời lên useState =====
-
-  // Push history state when navigation changes
   useEffect(() => {
     if (isPopState) {
       setIsPopState(false);
@@ -159,9 +146,8 @@ export default function App() {
     if (window.location.hash !== hash) {
       window.history.pushState(state, "", hash);
     }
-  }, [currentPage, selectedCategory, selectedProductId, selectedOrderId]);
+  }, [currentPage, selectedCategory, selectedProductId, selectedOrderId, isPopState]);
 
-  // Listen for browser back/forward
   const handlePopState = useCallback((event: PopStateEvent) => {
     setIsPopState(true);
 
@@ -190,14 +176,12 @@ export default function App() {
     return () => {
       window.removeEventListener("popstate", handlePopState);
     };
-  }, []);
+  }, [currentPage, selectedCategory, selectedProductId, selectedOrderId, handlePopState]);
 
-  // Save role to localStorage
   useEffect(() => {
     localStorage.setItem("role", role);
   }, [role]);
 
-  // Check for existing token on mount
   useEffect(() => {
     const token = getToken();
     if (token) {
@@ -220,18 +204,17 @@ export default function App() {
               payload.scope ||
               ""
           ).toLowerCase();
+
           if (roleStr.includes("admin")) userRole = "admin";
-          else if (roleStr.includes("staff"))
-            userRole = "staff"; // Nhận diện staff
+          else if (roleStr.includes("staff")) userRole = "staff";
           else userRole = "user";
         }
 
         setRole(userRole);
 
-        // ===== KHÔNG override nếu đang là payment return =====
         if (!paymentReturn) {
           if (userRole === "admin") setCurrentPage("admin-dashboard");
-          else if (userRole === "staff") setCurrentPage("staff-products"); // Chuyển trang staff
+          else if (userRole === "staff") setCurrentPage("staff-products");
           else setCurrentPage("home");
         }
       } catch {
@@ -239,47 +222,30 @@ export default function App() {
         localStorage.removeItem("userRole");
       }
     }
-  }, []);
+  }, [paymentReturn]);
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [role, currentPage]);
 
-  // Handle login
   const handleLogin = async (email: string, password: string) => {
-    try {
-      const response = await authApi.login({ email, password });
-      setToken(response.token);
+    const response = await authApi.login({ email, password });
+    setToken(response.token);
 
-      const roleStr = response.role?.toLowerCase() || "";
-      let userRole: UserRole = "user";
+    const roleStr = response.role?.toLowerCase() || "";
+    let userRole: UserRole = "user";
 
-      if (roleStr === "admin") userRole = "admin";
-      else if (roleStr === "staff") userRole = "staff";
+    if (roleStr === "admin") userRole = "admin";
+    else if (roleStr === "staff") userRole = "staff";
 
-      localStorage.setItem("userRole", userRole);
-      setRole(userRole);
+    localStorage.setItem("userRole", userRole);
+    setRole(userRole);
 
-      if (userRole === "admin") setCurrentPage("admin-dashboard");
-      else if (userRole === "staff") setCurrentPage("staff-products");
-      else setCurrentPage("home");
-
-      // const response = await authApi.login({ email, password });
-      // setToken(response.token);
-
-      // const userRole =
-      //   response.role?.toLowerCase() === "admin" ? "admin" : "user";
-
-      // localStorage.setItem("userRole", userRole);
-
-      // setRole(userRole);
-      // setCurrentPage(userRole === "admin" ? "admin-dashboard" : "home");
-    } catch (error) {
-      throw error;
-    }
+    if (userRole === "admin") setCurrentPage("admin-dashboard");
+    else if (userRole === "staff") setCurrentPage("staff-products");
+    else setCurrentPage("home");
   };
 
-  // Handle register
   const handleRegister = async (data: {
     fullName: string;
     email: string;
@@ -302,7 +268,6 @@ export default function App() {
     }
   };
 
-  // Handle logout
   const handleLogout = () => {
     removeToken();
     localStorage.removeItem("userRole");
@@ -313,19 +278,17 @@ export default function App() {
     setOrders([]);
   };
 
-  // ===== Payment Result Page =====
   if (currentPage === "payment-result") {
     return (
       <PaymentResult
         setCurrentPage={setCurrentPage}
         setCart={setCart}
-        setOrders={setOrders as any}
+        setOrders={setOrders}
         setSelectedOrderId={setSelectedOrderId}
       />
     );
   }
 
-  // Login page
   if (currentPage === "login") {
     return (
       <LoginPage
@@ -335,7 +298,6 @@ export default function App() {
     );
   }
 
-  // Register page
   if (currentPage === "register") {
     return (
       <RegisterPage
@@ -346,7 +308,7 @@ export default function App() {
   }
 
   if (role === "admin") {
-  return (
+    return (
       <AdminLayout
         role={role}
         currentPage={currentPage}
@@ -355,8 +317,8 @@ export default function App() {
         onLogout={handleLogout}
         products={products}
         setProducts={setProducts}
-        orders={orders as any}
-        setOrders={setOrders as any}
+        orders={orders}
+        setOrders={setOrders}
         reviews={reviews}
         setReviews={setReviews}
         users={users}
@@ -367,15 +329,15 @@ export default function App() {
 
   if (role === "user") {
     return (
-   <UserLayout
+      <UserLayout
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
         setRole={setRole}
         onLogout={handleLogout}
         cart={cart}
         setCart={setCart}
-        orders={orders as any}
-        setOrders={setOrders as any}
+        orders={orders}
+        setOrders={setOrders}
         products={products}
         selectedCategory={selectedCategory}
         setSelectedCategory={setSelectedCategory}
@@ -387,22 +349,20 @@ export default function App() {
     );
   }
 
-  
   if (role === "staff") {
     return (
-          <StaffLayout
+      <StaffLayout
         currentPage={currentPage}
         setCurrentPage={setCurrentPage}
         onLogout={handleLogout}
         products={products}
         setProducts={setProducts}
-        orders={orders as any}
-        setOrders={setOrders as any}
+        orders={orders}
+        setOrders={setOrders}
       />
     );
   }
 
-  // Guest layout
   return (
     <GuestLayout
       currentPage={currentPage}

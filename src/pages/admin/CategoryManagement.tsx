@@ -50,7 +50,7 @@ export default function CategoryManagement() {
       setIsLoading(true);
       const data = await categoryApi.getAll();
       setCategories(data);
-    } catch (error) {
+    } catch {
       toast.error("Error", "Could not load categories");
     } finally {
       setIsLoading(false);
@@ -105,7 +105,7 @@ export default function CategoryManagement() {
       await categoryApi.delete(id);
       await loadCategories();
       toast.success("Success", "Category deleted successfully");
-    } catch (error) {
+    } catch {
       toast.error("Error", "Could not delete category. It might be in use.");
     }
   };
@@ -114,9 +114,11 @@ export default function CategoryManagement() {
   const blockedParentIds = editingCategory
     ? new Set<number>([editingCategory.id, ...collectDescendantIds(editingCategory)])
     : new Set<number>();
+
   const availableParentOptions = flattenedCategories.filter(
     (category) => !blockedParentIds.has(category.id)
   );
+
   const normalizedSearchTerm = searchTerm.trim().toLowerCase();
   const filteredCategories = flattenedCategories.filter((category) => {
     if (!normalizedSearchTerm) return true;
@@ -164,9 +166,7 @@ export default function CategoryManagement() {
         <table className="w-full text-sm">
           <thead className="border-b border-border bg-secondary">
             <tr>
-              <th className="px-6 py-3 text-left font-semibold">ID</th>
               <th className="px-6 py-3 text-left font-semibold">Name</th>
-              <th className="px-6 py-3 text-left font-semibold">Parent</th>
               <th className="px-6 py-3 text-left font-semibold">Actions</th>
             </tr>
           </thead>
@@ -176,22 +176,10 @@ export default function CategoryManagement() {
                 key={category.id}
                 className="border-b border-border hover:bg-secondary/50"
               >
-                <td className="px-6 py-4">{category.id}</td>
                 <td className="px-6 py-4 font-medium">
-                  <div
-                    className="flex items-center gap-2"
-                    style={{ paddingLeft: `${category.level * 24}px` }}
-                  >
-                    {category.level > 0 && (
-                      <span className="text-xs text-muted-foreground">
-                        L{category.level}
-                      </span>
-                    )}
+                  <div className="flex items-center gap-2">
                     <span>{category.name}</span>
                   </div>
-                </td>
-                <td className="px-6 py-4 text-muted-foreground">
-                  {category.parentName ?? "Root"}
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-2">
@@ -214,7 +202,7 @@ export default function CategoryManagement() {
             {filteredCategories.length === 0 && (
               <tr>
                 <td
-                  colSpan={4}
+                  colSpan={2}
                   className="px-6 py-8 text-center text-muted-foreground"
                 >
                   No categories found

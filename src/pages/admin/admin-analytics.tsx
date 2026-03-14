@@ -1,217 +1,418 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react";
 import {
-  BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-} from "recharts"
-import { TrendingUp } from "lucide-react"
-import type { ProductSummary, Order, DashboardStats } from "../../types"
-import { dashboardApi } from "../../services/dashboard-api"
-import { useToast } from "../../contexts/ToastContext"
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import {
+  Activity,
+  DollarSign,
+  Package,
+  ShoppingBag,
+  TrendingUp,
+} from "lucide-react";
+import type { ProductSummary } from "../../types";
+import {
+  dashboardApi,
+  type DashboardSummaryResponse,
+} from "../../services/dashboard-api";
+import { orderApi, type OrderResponse } from "../../services/order-api";
+import { useToast } from "../../contexts/ToastContext";
 
 interface AdminAnalyticsProps {
   products: ProductSummary[];
-  orders: Order[];
+  orders: OrderResponse[];
 }
 
-const COLORS = ["#f59e0b", "#10b981", "#3b82f6", "#8b5cf6", "#ec4899"]
+type Period = "week" | "month" | "quarter" | "year";
 
-export default function AdminAnalytics({ products, orders }: AdminAnalyticsProps) {
-  const [stats, setStats] = useState<DashboardStats | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const toast = useToast()
+const PIE_COLORS = ["#0f766e", "#f59e0b", "#2563eb", "#dc2626", "#7c3aed", "#ea580c"];
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(value || 0);
+}
+
+function formatCompactCurrency(value: number) {
+  if (!value) return "$0";
+  if (Math.abs(value) >= 1_000_000_000) return `$${(value / 1_000_000_000).toFixed(1)}B`;
+  if (Math.abs(value) >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
+  if (Math.abs(value) >= 1_000) return `$${(value / 1_000).toFixed(1)}K`;
+  return `$${value}`;
+}
+
+
+
+function InsightCard({
+  title,
+  value,
+  note,
+  icon: Icon,
+  iconClassName,
+}: {
+  title: string;
+  value: string;
+  note: string;
+  icon: React.ElementType;
+  iconClassName: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+            {title}
+          </p>
+          <p className="mt-2 text-2xl font-bold text-foreground">{value}</p>
+          <p className="mt-2 text-sm text-muted-foreground">{note}</p>
+        </div>
+        <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${iconClassName}`}>
+          <Icon className="h-5 w-5" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SectionCard({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      <div className="border-b border-border px-6 py-4">
+        <h3 className="text-base font-semibold text-foreground">{title}</h3>
+      </div>
+      <div className="p-6">{children}</div>
+    </section>
+  );
+}
+
+export default function AdminAnalytics({ products, orders: initialOrders }: AdminAnalyticsProps) {
+  const [summary, setSummary] = useState<DashboardSummaryResponse | null>(null);
+  const [orders, setOrders] = useState<OrderResponse[]>(initialOrders || []);
+  const [selectedPeriod, setSelectedPeriod] = useState<Period>("month");
+  const [isLoading, setIsLoading] = useState(true);
+  const toast = useToast();
 
   useEffect(() => {
-    loadStats()
-  }, [])
+    loadAnalytics();
+  }, []);
 
-  const loadStats = async () => {
+  const loadAnalytics = async () => {
     try {
-      setIsLoading(true)
-      const data = await dashboardApi.getStats()
-      setStats(data)
-    } catch (error) {
-      toast.error("Analytics error", "Failed to load analytics data")
+      setIsLoading(true);
+
+      const [summaryData, ordersData] = await Promise.all([
+        dashboardApi.getSummary(),
+        orderApi.getAllOrders(),
+      ]);
+
+      setSummary(summaryData);
+      setOrders(ordersData);
+    } catch {
+      toast.error("Analytics error", "Failed to load analytics data");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
-  const totalRevenue = stats?.totalRevenue ?? 0
-  const avgOrderValue = orders.length > 0
-    ? orders.reduce((sum, o) => sum + o.finalAmount, 0) / orders.length
-    : 0
+  const salesMap = {
+    week: summary?.salesThisWeek,
+    month: summary?.salesThisMonth,
+    quarter: summary?.salesThisQuarter,
+    year: summary?.salesThisYear,
+  };
 
-  // Revenue over time chart data
-  const revenueChartData = stats?.revenueOverTime?.map((item) => ({
-    month: item.date,
-    revenue: item.revenue,
-  })) ?? []
+  const activeSales = salesMap[selectedPeriod];
 
-  // Top selling products for pie chart
-  const topProductsData = stats?.topSellingProducts?.map((item) => ({
-    name: item.productName,
+  const revenueChartData = useMemo(
+    () =>
+      (activeSales?.dataPoints ?? []).map((item) => ({
+        label: item.timeLabel,
+        revenue: Number(item.revenue ?? 0),
+      })),
+    [activeSales]
+  );
+
+  const topProducts =
+    selectedPeriod === "year"
+      ? summary?.topSellingProductsThisYear ?? []
+      : summary?.topSellingProductsThisMonth ?? [];
+
+  const topProductsPieData = topProducts.map((item) => ({
+    name:
+      item.productName.length > 20
+        ? `${item.productName.slice(0, 20)}...`
+        : item.productName,
     value: item.totalQuantitySold,
-  })) ?? []
+  }));
 
-  // Order status breakdown
-  const orderStatusBreakdown = orders.reduce((acc, order) => {
-    const existing = acc.find((s) => s.status === order.status)
-    if (existing) {
-      existing.count++
-    } else {
-      acc.push({ status: order.status, count: 1 })
-    }
-    return acc
-  }, [] as Array<{ status: string; count: number }>)
+  const orderStatusData = useMemo(() => {
+    const grouped = orders.reduce<Record<string, number>>((acc, order) => {
+      const key = order.tracking || order.status || "UNKNOWN";
+      acc[key] = (acc[key] ?? 0) + 1;
+      return acc;
+    }, {});
+
+    return Object.entries(grouped).map(([status, count]) => ({
+      status,
+      count,
+    }));
+  }, [orders]);
+
+  const averageOrderValue =
+    orders.length > 0
+      ? orders.reduce((sum, order) => sum + Number(order.finalAmount ?? 0), 0) /
+        orders.length
+      : 0;
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-primary"></div>
       </div>
-    )
+    );
   }
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h2 className="text-2xl font-serif font-semibold">Analytics & Insights</h2>
-        <p className="text-muted-foreground mt-1">Business performance and sales metrics</p>
+    <div className="space-y-6">
+      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div>
+          <h2 className="text-2xl font-serif font-semibold">Analytics & Insights</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Revenue, order behavior and product performance
+          </p>
+        </div>
+
+        <div className="inline-flex rounded-xl border border-border bg-card p-1 shadow-sm">
+          {(["week", "month", "quarter", "year"] as Period[]).map((period) => (
+            <button
+              key={period}
+              onClick={() => setSelectedPeriod(period)}
+              className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                selectedPeriod === period
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+              }`}
+            >
+              {period}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-card border border-border rounded-lg p-6">
-          <p className="text-sm text-muted-foreground mb-2">Total Revenue</p>
-          <p className="text-3xl font-bold text-primary">${totalRevenue.toFixed(2)}</p>
-          <p className="text-xs text-green-600 mt-2">↑ 12% from last period</p>
-        </div>
-        <div className="bg-card border border-border rounded-lg p-6">
-          <p className="text-sm text-muted-foreground mb-2">Avg Order Value</p>
-          <p className="text-3xl font-bold text-primary">${avgOrderValue.toFixed(2)}</p>
-          <p className="text-xs text-green-600 mt-2">↑ 8% from last period</p>
-        </div>
-        <div className="bg-card border border-border rounded-lg p-6">
-          <p className="text-sm text-muted-foreground mb-2">Total Orders</p>
-          <p className="text-3xl font-bold text-primary">{orders.length}</p>
-          <p className="text-xs text-green-600 mt-2">↑ 15% from last period</p>
-        </div>
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <InsightCard
+          title="Revenue"
+          value={formatCurrency(Number(activeSales?.totalRevenue ?? 0))}
+          note="Selected period revenue"
+          icon={DollarSign}
+          iconClassName="bg-primary/10 text-primary"
+        />
+        <InsightCard
+          title="Growth"
+          value={`${Number(activeSales?.percentageChange ?? 0).toFixed(1)}%`}
+          note="Compared with previous period"
+          icon={TrendingUp}
+          iconClassName="bg-emerald-100 text-emerald-700"
+        />
+        <InsightCard
+          title="Avg Order Value"
+          value={formatCurrency(averageOrderValue)}
+          note=""
+          icon={ShoppingBag}
+          iconClassName="bg-amber-100 text-amber-700"
+        />
+        <InsightCard
+          title="Catalog Size"
+          value={products.length.toLocaleString("vi-VN")}
+          note="Products currently in catalog"
+          icon={Package}
+          iconClassName="bg-sky-100 text-sky-700"
+        />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Revenue Trend */}
-        <div className="bg-card border border-border rounded-lg p-6">
-          <h3 className="text-lg font-semibold mb-6">Revenue Trend</h3>
+      <div className="grid gap-6 xl:grid-cols-[1.5fr_1fr]">
+        <SectionCard title="Revenue Trend">
           {revenueChartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={revenueChartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                <XAxis dataKey="month" stroke="var(--color-muted-foreground)" />
-                <YAxis stroke="var(--color-muted-foreground)" />
-                <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="revenue" stroke="var(--color-primary)" strokeWidth={2} />
-              </LineChart>
-            </ResponsiveContainer>
+            <div className="h-[340px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={revenueChartData}>
+                  <defs>
+                    <linearGradient id="analyticsRevenueFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#0f766e" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="#0f766e" stopOpacity={0.04} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid vertical={false} strokeDasharray="4 4" stroke="#e7e5e4" />
+                  <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: "#78716c" }} />
+                  <YAxis
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fontSize: 12, fill: "#78716c" }}
+                    tickFormatter={(value) => formatCompactCurrency(Number(value))}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      borderRadius: "16px",
+                      border: "1px solid #e7e5e4",
+                      background: "#ffffff",
+                      boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
+                    }}
+                    formatter={(value: number) => [formatCurrency(value), "Revenue"]}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="revenue"
+                    stroke="#0f766e"
+                    strokeWidth={3}
+                    fill="url(#analyticsRevenueFill)"
+                    dot={{ r: 3, fill: "#ffffff", stroke: "#0f766e", strokeWidth: 2 }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
           ) : (
-            <p className="text-sm text-muted-foreground text-center py-10">No revenue data available</p>
+            <div className="py-16 text-center text-sm text-muted-foreground">
+              No revenue data available
+            </div>
           )}
-        </div>
+        </SectionCard>
 
-        {/* Order Status Breakdown */}
-        <div className="bg-card border border-border rounded-lg p-6">
-          <h3 className="text-lg font-semibold mb-6">Order Status Breakdown</h3>
-          {orderStatusBreakdown.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={orderStatusBreakdown}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                <XAxis dataKey="status" stroke="var(--color-muted-foreground)" />
-                <YAxis stroke="var(--color-muted-foreground)" />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="count" fill="var(--color-accent)" name="Orders" />
-              </BarChart>
-            </ResponsiveContainer>
+        <SectionCard title="Order Status Breakdown">
+          {orderStatusData.length > 0 ? (
+            <div className="h-[340px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={orderStatusData} barSize={28}>
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#e7e5e4" />
+                  <XAxis dataKey="status" tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: "#78716c" }} />
+                  <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: "#78716c" }} />
+                  <Tooltip
+                    contentStyle={{
+                      borderRadius: "16px",
+                      border: "1px solid #e7e5e4",
+                      background: "#ffffff",
+                      boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
+                    }}
+                  />
+                  <Bar dataKey="count" radius={[10, 10, 0, 0]} fill="#f59e0b" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           ) : (
-            <p className="text-sm text-muted-foreground text-center py-10">No order data available</p>
+            <div className="py-16 text-center text-sm text-muted-foreground">
+              No order data available
+            </div>
           )}
-        </div>
+        </SectionCard>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Top Selling Products */}
-        <div className="bg-card border border-border rounded-lg p-6">
-          <h3 className="text-lg font-semibold mb-6">Top Selling Products</h3>
-          {topProductsData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={topProductsData}
-                  nameKey="name"
-                  dataKey="value"
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, value }) => `${name} (${value})`}
-                  outerRadius={100}
-                  fill="#8884d8"
-                >
-                  {topProductsData.map((_entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+      <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
+        <SectionCard title="Top Selling Products">
+          {topProductsPieData.length > 0 ? (
+            <div className="h-[340px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={topProductsPieData}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius={68}
+                    outerRadius={108}
+                    paddingAngle={4}
+                  >
+                    {topProductsPieData.map((_, index) => (
+                      <Cell key={index} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      borderRadius: "16px",
+                      border: "1px solid #e7e5e4",
+                      background: "#ffffff",
+                      boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
           ) : (
-            <p className="text-sm text-muted-foreground text-center py-10">No sales data available</p>
+            <div className="py-16 text-center text-sm text-muted-foreground">
+              No top-selling product data
+            </div>
           )}
-        </div>
+        </SectionCard>
 
-        {/* Top Insights */}
-        <div className="bg-card border border-border rounded-lg p-6">
-          <h3 className="text-lg font-semibold mb-6">Top Insights</h3>
+        <SectionCard title="Quick Insights">
           <div className="space-y-4">
-            <div className="flex items-start gap-3 p-3 bg-secondary rounded">
-              <TrendingUp className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="font-medium text-sm">Top Seller</p>
-                <p className="text-xs text-muted-foreground">
-                  {stats?.topSellingProducts?.[0]?.productName ?? "N/A"} (
-                  {stats?.topSellingProducts?.[0]?.totalQuantitySold ?? 0} sold)
-                </p>
+            <div className="rounded-2xl bg-background p-4">
+              <div className="flex items-start gap-3">
+                <Activity className="mt-0.5 h-5 w-5 text-primary" />
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Best Seller</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {topProducts[0]?.productName ?? "N/A"} · {topProducts[0]?.totalQuantitySold ?? 0} sold
+                  </p>
+                </div>
               </div>
             </div>
-            <div className="flex items-start gap-3 p-3 bg-secondary rounded">
-              <TrendingUp className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="font-medium text-sm">Completed Orders</p>
-                <p className="text-xs text-muted-foreground">
-                  {orders.filter((o) => o.status === "COMPLETED").length} completed orders this period
-                </p>
+
+            <div className="rounded-2xl bg-background p-4">
+              <div className="flex items-start gap-3">
+                <ShoppingBag className="mt-0.5 h-5 w-5 text-amber-600" />
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Orders Count</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {orders.length.toLocaleString("vi-VN")} orders from admin orders API
+                  </p>
+                </div>
               </div>
             </div>
-            <div className="flex items-start gap-3 p-3 bg-secondary rounded">
-              <TrendingUp className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="font-medium text-sm">Active Products</p>
-                <p className="text-xs text-muted-foreground">{products.length} products in catalog</p>
+
+            <div className="rounded-2xl bg-background p-4">
+              <div className="flex items-start gap-3">
+                <DollarSign className="mt-0.5 h-5 w-5 text-emerald-600" />
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Previous Revenue</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {formatCurrency(Number(activeSales?.previousPeriodRevenue ?? 0))}
+                  </p>
+                </div>
               </div>
             </div>
-            <div className="flex items-start gap-3 p-3 bg-secondary rounded">
-              <TrendingUp className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="font-medium text-sm">New Users</p>
-                <p className="text-xs text-muted-foreground">
-                  {stats?.newUsersCount ?? 0} new users this period
-                </p>
+
+            <div className="rounded-2xl bg-background p-4">
+              <div className="flex items-start gap-3">
+                <TrendingUp className="mt-0.5 h-5 w-5 text-sky-600" />
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Growth Trend</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {Number(activeSales?.percentageChange ?? 0).toFixed(1)}% versus previous period
+                  </p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </SectionCard>
       </div>
     </div>
-  )
+  );
 }
