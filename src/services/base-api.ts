@@ -1,4 +1,4 @@
-const API_BASE_URL = "https://swd392-group3.onrender.com/api";
+const API_BASE_URL = "https://eco-swd392-group3.onrender.com/api";
 
 // ============================================
 // AUTH TOKEN MANAGEMENT
