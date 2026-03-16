@@ -5,7 +5,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationProvider;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -35,8 +34,11 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // DEBUG: Tạm thời cho phép tất cả các origin
-        configuration.setAllowedOrigins(List.of("*"));
+        // Revert back to the original, secure origins
+        configuration.setAllowedOriginPatterns(List.of(
+                "http://localhost:*",
+                "https://swd392-group3-fe.onrender.com"
+        ));
 
         // Các method HTTP được phép
         configuration.setAllowedMethods(List.of(
@@ -57,8 +59,7 @@ public class SecurityConfig {
         ));
 
         // Cho phép gửi cookie / credentials
-        // Lưu ý: không thể dùng `allowCredentials(true)` với `allowedOrigins("*")`.
-        // configuration.setAllowCredentials(true);
+        configuration.setAllowCredentials(true);
 
         // Thời gian cache preflight request
         configuration.setMaxAge(3600L);
@@ -76,8 +77,8 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http
-                // Bật CORS theo cấu hình trên
-                .cors(Customizer.withDefaults())
+                // Explicitly use the corsConfigurationSource bean
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
                 // Tắt CSRF để dễ test API
                 .csrf(csrf -> csrf.disable())
