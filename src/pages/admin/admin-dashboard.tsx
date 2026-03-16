@@ -20,7 +20,8 @@ import {
   TrendingUp,
   Users,
 } from "lucide-react";
-import type { ProductSummary, Review, User } from "../../types";
+import type { ProductSummary, Review } from "../../types";
+import type { UserDto } from "../../services/user-api";
 import {
   dashboardApi,
   type DashboardSummaryResponse,
@@ -34,7 +35,7 @@ interface AdminDashboardProps {
   products: ProductSummary[];
   orders: OrderResponse[];
   reviews: Review[];
-  users: User[];
+  users: UserDto[];
 }
 
 type DashboardPeriod = "day" | "week" | "month" | "quarter" | "year";

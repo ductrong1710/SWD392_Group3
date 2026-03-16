@@ -7,8 +7,8 @@ import type {
   PageType,
   ProductSummary,
   Review,
-  User,
 } from "../types";
+import type { UserDto } from "../services/user-api";
 import AdminTaskbar from "../pages/admin/admin-taskbar";
 import AdminHeader from "../component/headers/admin-header";
 import AdminDashboard from "../pages/admin/admin-dashboard";
@@ -32,8 +32,8 @@ interface AdminLayoutProps {
   setOrders: (orders: OrderResponse[]) => void;
   reviews: Review[];
   setReviews: (reviews: Review[]) => void;
-  users: User[];
-  setUsers: (users: User[]) => void;
+  users: UserDto[];
+  setUsers: (users: UserDto[]) => void;
 }
 
 export default function AdminLayout({

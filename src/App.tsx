@@ -16,9 +16,9 @@ import type {
   PageType,
   CartItem,
   Review,
-  User,
   ProductSummary,
 } from "./types";
+import type { UserDto } from "./services/user-api";
 
 function buildHistoryState(
   page: PageType,
@@ -125,7 +125,7 @@ export default function App() {
   const [orders, setOrders] = useState<OrderResponse[]>([]);
   const [products, setProducts] = useState<ProductSummary[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<UserDto[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(
     null

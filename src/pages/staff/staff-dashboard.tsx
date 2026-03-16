@@ -13,7 +13,8 @@ import {
 } from "recharts";
 import { TrendingUp, ShoppingBag, Users, DollarSign, Package, ArrowUpRight } from "lucide-react";
 import type { OrderResponse } from "../../services/order-api";
-import type { ProductSummary, Review, User, DashboardStats } from "../../types";
+import type { ProductSummary, Review, DashboardStats } from "../../types";
+import type { UserDto } from "../../services/user-api";
 import { dashboardApi } from "../../services/dashboard-api";
 import { useToast } from "../../contexts/ToastContext";
 
@@ -21,7 +22,7 @@ interface AdminDashboardProps {
   products: ProductSummary[];
   orders: OrderResponse[];
   reviews: Review[];
-  users: User[];
+  users: UserDto[];
 }
 
 interface StatCardProps {
@@ -111,8 +112,18 @@ export default function AdminDashboard({
   const loadDashboardStats = async () => {
     try {
       setIsLoading(true);
-      const data = await dashboardApi.getStats();
-      setStats(data);
+      const summary = await dashboardApi.getSummary();
+      setStats({
+        totalRevenue: summary.salesThisMonth.totalRevenue,
+        newOrdersCount: 0,
+        newUsersCount: summary.totalCustomers,
+        revenueOverTime: [],
+        topSellingProducts: summary.topSellingProductsThisMonth.map((p) => ({
+          productId: p.productId,
+          productName: p.productName,
+          totalQuantitySold: p.totalQuantitySold,
+        })),
+      });
     } catch {
       toast.error("Dashboard error", "Failed to load dashboard statistics");
     } finally {

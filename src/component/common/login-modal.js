@@ -1,0 +1,6 @@
+"use client";
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { X } from "lucide-react";
+export default function LoginModal({ onClose, onLogin }) {
+    return (_jsx("div", { className: "fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4", children: _jsxs("div", { className: "bg-background rounded-lg max-w-sm w-full p-6 border border-border", children: [_jsxs("div", { className: "flex items-center justify-between mb-4", children: [_jsx("h2", { className: "text-xl font-serif font-bold", children: "Sign In to Continue" }), _jsx("button", { onClick: onClose, className: "text-muted-foreground hover:text-foreground", children: _jsx(X, { className: "w-5 h-5" }) })] }), _jsx("p", { className: "text-muted-foreground mb-6", children: "Please log in to add items to your cart and complete your purchase." }), _jsxs("div", { className: "space-y-4", children: [_jsx("button", { onClick: onLogin, className: "w-full py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors", children: "Go to Login" }), _jsx("button", { onClick: onClose, className: "w-full py-2 border border-border rounded-lg font-medium hover:bg-secondary transition-colors", children: "Continue Browsing" })] })] }) }));
+}
