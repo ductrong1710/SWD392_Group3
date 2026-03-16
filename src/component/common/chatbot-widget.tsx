@@ -13,6 +13,13 @@ interface ChatbotWidgetProps {
   role?: string;
 }
 
+// === MAP AI LINKS → FE SPA LINKS ===
+const productLinkMap: Record<string, string> = {
+  "https://example.com/Uniqlo-AIRism-Oversized-Crew-Neck-T-Shirt": "/#/products/product/1",
+  "https://example.com/Another-Product": "/#/products/product/2",
+  // Add more mappings here
+};
+
 export default function ChatbotWidget({ role = "guest" }: ChatbotWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -21,62 +28,58 @@ export default function ChatbotWidget({ role = "guest" }: ChatbotWidgetProps) {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // === HÀM XỬ LÝ TEXT THÀNH LINK (NEW) ===
+  // === HÀM XỬ LÝ TEXT THÀNH LINK + MAP INTERNAL/EXTERNAL ===
   const renderMessage = (text: string) => {
-    // Regex bắt 2 trường hợp: 
-    // 1. Markdown link: [Tên sản phẩm](/link) 
-    // 2. Raw URL: https://google.com
     const regex = /\[([^\]]+)\]\(([^)]+)\)|(https?:\/\/[^\s]+)/g;
-    const parts = [];
+    const parts: (string | JSX.Element)[] = [];
     let lastIndex = 0;
     let match;
 
     while ((match = regex.exec(text)) !== null) {
-      // Đẩy phần chữ bình thường (trước link) vào mảng
       if (match.index > lastIndex) {
         parts.push(text.substring(lastIndex, match.index));
       }
 
+      let linkText: string, linkUrl: string;
+
       if (match[3]) {
-        // Xử lý khi AI trả về Link thô (Raw URL)
-        parts.push(
-          <a
-            key={match.index}
-            href={match[3]}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-indigo-300 underline hover:text-indigo-400 font-medium transition-colors"
-          >
-            {match[3]}
-          </a>
-        );
+        // Raw URL
+        linkText = match[3];
+        linkUrl = match[3];
       } else {
-        // Xử lý khi AI trả về Link Markdown: [Tên hiển thị](URL)
-        const linkText = match[1];
-        const linkUrl = match[2];
-        
-        parts.push(
-          <a
-            key={match.index}
-            href={linkUrl}
-            // Nếu link bắt đầu bằng http thì mở tab mới, nếu link nội bộ (VD: /products/1) thì mở tab hiện tại
-            target={linkUrl.startsWith("http") ? "_blank" : "_self"}
-            rel={linkUrl.startsWith("http") ? "noopener noreferrer" : ""}
-            className="text-blue-600 underline hover:text-blue-800 font-semibold transition-colors dark:text-blue-400"
-          >
-            {linkText}
-          </a>
-        );
+        // Markdown [text](url)
+        linkText = match[1];
+        linkUrl = match[2];
       }
+
+      // Map AI link → FE SPA link
+      const correctedUrl = productLinkMap[linkUrl] || linkUrl;
+
+      // Internal if path starts with /, #, or is our FE domain
+      const isInternal =
+        correctedUrl.startsWith("/") ||
+        correctedUrl.startsWith("#") ||
+        correctedUrl.includes("swd392-group3-fe.onrender.com");
+
+      parts.push(
+        <a
+          key={match.index}
+          href={correctedUrl}
+          target={isInternal ? "_self" : "_blank"}
+          rel={isInternal ? "" : "noopener noreferrer"}
+          className="text-blue-600 underline hover:text-blue-800 font-semibold transition-colors dark:text-blue-400"
+        >
+          {linkText}
+        </a>
+      );
+
       lastIndex = regex.lastIndex;
     }
 
-    // Đẩy phần chữ còn lại (sau link cuối) vào mảng
     if (lastIndex < text.length) {
       parts.push(text.substring(lastIndex));
     }
 
-    // Nếu không có link nào thì trả về text gốc, có thì trả về mảng React Node
     return parts.length > 0 ? parts : text;
   };
 
@@ -104,7 +107,8 @@ export default function ChatbotWidget({ role = "guest" }: ChatbotWidgetProps) {
         ...newMessages,
         {
           role: "assistant",
-          content: "Sorry, I'm having trouble connecting. Please try again later.",
+          content:
+            "Sorry, I'm having trouble connecting. Please try again later.",
         },
       ]);
     } finally {
@@ -142,7 +146,9 @@ export default function ChatbotWidget({ role = "guest" }: ChatbotWidgetProps) {
               </div>
               <div>
                 <p className="font-semibold text-sm">Style Assistant</p>
-                <p className="text-xs text-muted-foreground">Always here to help</p>
+                <p className="text-xs text-muted-foreground">
+                  Always here to help
+                </p>
               </div>
             </div>
             <button
@@ -158,7 +164,9 @@ export default function ChatbotWidget({ role = "guest" }: ChatbotWidgetProps) {
             {messages.map((msg, idx) => (
               <div
                 key={idx}
-                className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                className={`flex ${
+                  msg.role === "user" ? "justify-end" : "justify-start"
+                }`}
               >
                 <div
                   className={`max-w-[80%] px-4 py-2 rounded-lg ${
@@ -167,13 +175,13 @@ export default function ChatbotWidget({ role = "guest" }: ChatbotWidgetProps) {
                       : "bg-secondary text-foreground"
                   }`}
                 >
-                  {/* SỬ DỤNG renderMessage(msg.content) Ở ĐÂY */}
                   <p className="text-sm whitespace-pre-wrap leading-relaxed">
                     {renderMessage(msg.content)}
                   </p>
                 </div>
               </div>
             ))}
+
             {isLoading && (
               <div className="flex justify-start">
                 <div className="bg-secondary px-4 py-2 rounded-lg">
