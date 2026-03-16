@@ -27,25 +27,21 @@ public class SecurityConfig {
     private final AuthenticationProvider authenticationProvider;
 
     /**
-     * Cấu hình CORS cho toàn bộ ứng dụng.
-     * Cho phép FE trên Render và localhost truy cập.
+     * Cấu hình CORS cho toàn bộ ứng dụng
      */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // Revert back to the original, secure origins
         configuration.setAllowedOriginPatterns(List.of(
                 "http://localhost:*",
                 "https://swd392-group3-fe.onrender.com"
         ));
 
-        // Các method HTTP được phép
         configuration.setAllowedMethods(List.of(
                 "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"
         ));
 
-        // Header gửi lên server
         configuration.setAllowedHeaders(List.of(
                 "Authorization",
                 "Content-Type",
@@ -53,15 +49,11 @@ public class SecurityConfig {
                 "Origin"
         ));
 
-        // Header mà client có thể đọc
         configuration.setExposedHeaders(List.of(
                 "Authorization"
         ));
 
-        // Cho phép gửi cookie / credentials
         configuration.setAllowCredentials(true);
-
-        // Thời gian cache preflight request
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
@@ -70,37 +62,33 @@ public class SecurityConfig {
         return source;
     }
 
-    /**
-     * Cấu hình SecurityFilterChain với Spring Security.
-     */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-
         http
-                // Explicitly use the corsConfigurationSource bean
+                // Sử dụng CORS config đã khai báo
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
                 // Tắt CSRF để dễ test API
                 .csrf(csrf -> csrf.disable())
 
-                // Quy tắc phân quyền
+                // Phân quyền
                 .authorizeHttpRequests(auth -> auth
-                        // Cho phép tất cả OPTIONS requests (preflight)
+                        // Cho phép OPTIONS requests trước khi JWT filter chạy
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // Các endpoint public (auth, chatbot, payment)
+                        // Endpoint public
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/api/v1/chatbot/**").permitAll()
                         .requestMatchers("/api/v1/payment/**").permitAll()
 
-                        // Các GET public
+                        // GET public
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/products/**",
                                 "/api/v1/categories/**",
                                 "/api/v1/reviews/**"
                         ).permitAll()
 
-                        // Các request khác cần authentication
+                        // Các request còn lại cần auth
                         .anyRequest().authenticated()
                 )
 
@@ -109,7 +97,7 @@ public class SecurityConfig {
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
 
-                // Provider và filter JWT
+                // JWT và AuthenticationProvider
                 .authenticationProvider(authenticationProvider)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
