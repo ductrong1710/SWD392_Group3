@@ -35,11 +35,8 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // Các domain FE được phép
-        configuration.setAllowedOriginPatterns(List.of(
-                "http://localhost:*",
-                "https://swd392-group3-fe.onrender.com"
-        ));
+        // DEBUG: Tạm thời cho phép tất cả các origin
+        configuration.setAllowedOrigins(List.of("*"));
 
         // Các method HTTP được phép
         configuration.setAllowedMethods(List.of(
@@ -60,7 +57,8 @@ public class SecurityConfig {
         ));
 
         // Cho phép gửi cookie / credentials
-        configuration.setAllowCredentials(true);
+        // Lưu ý: không thể dùng `allowCredentials(true)` với `allowedOrigins("*")`.
+        // configuration.setAllowCredentials(true);
 
         // Thời gian cache preflight request
         configuration.setMaxAge(3600L);
