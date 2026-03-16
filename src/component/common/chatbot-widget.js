@@ -3,12 +3,6 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useState } from "react";
 import { MessageCircle, X, Send, Loader2 } from "lucide-react";
 import { chatbotApi } from "../../services/chatbot-api";
-// === MAP AI LINKS → FE SPA LINKS ===
-const productLinkMap = {
-    "https://example.com/Uniqlo-AIRism-Oversized-Crew-Neck-T-Shirt": "/#/products/product/1",
-    "https://example.com/Another-Product": "/#/products/product/2",
-    // Add more mappings here
-};
 export default function ChatbotWidget({ role = "guest" }) {
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState([
@@ -16,7 +10,6 @@ export default function ChatbotWidget({ role = "guest" }) {
     ]);
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
-    // === HÀM XỬ LÝ TEXT THÀNH LINK + MAP INTERNAL/EXTERNAL ===
     const renderMessage = (text) => {
         const regex = /\[([^\]]+)\]\(([^)]+)\)|(https?:\/\/[^\s]+)/g;
         const parts = [];
@@ -30,20 +23,17 @@ export default function ChatbotWidget({ role = "guest" }) {
             if (match[3]) {
                 // Raw URL
                 linkText = match[3];
-                linkUrl = match[3];
+                // Lấy slug từ URL AI
+                const slug = match[3].split("/").pop(); // "Uniqlo-AIRism-Oversized-Crew-Neck-T-Shirt"
+                linkUrl = `#/products/${slug}`;
             }
             else {
                 // Markdown [text](url)
                 linkText = match[1];
-                linkUrl = match[2];
+                const slug = match[2].split("/").pop();
+                linkUrl = `#/products/${slug}`;
             }
-            // Map AI link → FE SPA link
-            const correctedUrl = productLinkMap[linkUrl] || linkUrl;
-            // Internal if path starts with /, #, or is our FE domain
-            const isInternal = correctedUrl.startsWith("/") ||
-                correctedUrl.startsWith("#") ||
-                correctedUrl.includes("swd392-group3-fe.onrender.com");
-            parts.push(_jsx("a", { href: correctedUrl, target: isInternal ? "_self" : "_blank", rel: isInternal ? "" : "noopener noreferrer", className: "text-blue-600 underline hover:text-blue-800 font-semibold transition-colors dark:text-blue-400", children: linkText }, match.index));
+            parts.push(_jsx("a", { href: linkUrl, target: "_self", className: "text-blue-600 underline hover:text-blue-800 font-semibold transition-colors dark:text-blue-400", children: linkText }, match.index));
             lastIndex = regex.lastIndex;
         }
         if (lastIndex < text.length) {

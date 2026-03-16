@@ -13,13 +13,6 @@ interface ChatbotWidgetProps {
   role?: string;
 }
 
-// === MAP AI LINKS → FE SPA LINKS ===
-const productLinkMap: Record<string, string> = {
-  "https://example.com/Uniqlo-AIRism-Oversized-Crew-Neck-T-Shirt": "/#/products/product/1",
-  "https://example.com/Another-Product": "/#/products/product/2",
-  // Add more mappings here
-};
-
 export default function ChatbotWidget({ role = "guest" }: ChatbotWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -28,60 +21,53 @@ export default function ChatbotWidget({ role = "guest" }: ChatbotWidgetProps) {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // === HÀM XỬ LÝ TEXT THÀNH LINK + MAP INTERNAL/EXTERNAL ===
-  const renderMessage = (text: string) => {
-    const regex = /\[([^\]]+)\]\(([^)]+)\)|(https?:\/\/[^\s]+)/g;
-    const parts: (string | JSX.Element)[] = [];
-    let lastIndex = 0;
-    let match;
+ const renderMessage = (text: string) => {
+  const regex = /\[([^\]]+)\]\(([^)]+)\)|(https?:\/\/[^\s]+)/g;
+  const parts: (string | JSX.Element)[] = [];
+  let lastIndex = 0;
+  let match;
 
-    while ((match = regex.exec(text)) !== null) {
-      if (match.index > lastIndex) {
-        parts.push(text.substring(lastIndex, match.index));
-      }
-
-      let linkText: string, linkUrl: string;
-
-      if (match[3]) {
-        // Raw URL
-        linkText = match[3];
-        linkUrl = match[3];
-      } else {
-        // Markdown [text](url)
-        linkText = match[1];
-        linkUrl = match[2];
-      }
-
-      // Map AI link → FE SPA link
-      const correctedUrl = productLinkMap[linkUrl] || linkUrl;
-
-      // Internal if path starts with /, #, or is our FE domain
-      const isInternal =
-        correctedUrl.startsWith("/") ||
-        correctedUrl.startsWith("#") ||
-        correctedUrl.includes("swd392-group3-fe.onrender.com");
-
-      parts.push(
-        <a
-          key={match.index}
-          href={correctedUrl}
-          target={isInternal ? "_self" : "_blank"}
-          rel={isInternal ? "" : "noopener noreferrer"}
-          className="text-blue-600 underline hover:text-blue-800 font-semibold transition-colors dark:text-blue-400"
-        >
-          {linkText}
-        </a>
-      );
-
-      lastIndex = regex.lastIndex;
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.substring(lastIndex, match.index));
     }
 
-    if (lastIndex < text.length) {
-      parts.push(text.substring(lastIndex));
+    let linkText: string, linkUrl: string;
+
+    if (match[3]) {
+      // Raw URL
+      linkText = match[3];
+
+      // Lấy slug từ URL AI
+      const slug = match[3].split("/").pop(); // "Uniqlo-AIRism-Oversized-Crew-Neck-T-Shirt"
+      linkUrl = `#/products/${slug}`;
+    } else {
+      // Markdown [text](url)
+      linkText = match[1];
+      const slug = match[2].split("/").pop();
+      linkUrl = `#/products/${slug}`;
     }
 
-    return parts.length > 0 ? parts : text;
-  };
+    parts.push(
+      <a
+        key={match.index}
+        href={linkUrl}
+        target="_self"
+        className="text-blue-600 underline hover:text-blue-800 font-semibold transition-colors dark:text-blue-400"
+      >
+        {linkText}
+      </a>
+    );
+
+    lastIndex = regex.lastIndex;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(text.substring(lastIndex));
+  }
+
+  return parts.length > 0 ? parts : text;
+};
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -107,8 +93,7 @@ export default function ChatbotWidget({ role = "guest" }: ChatbotWidgetProps) {
         ...newMessages,
         {
           role: "assistant",
-          content:
-            "Sorry, I'm having trouble connecting. Please try again later.",
+          content: "Sorry, I'm having trouble connecting. Please try again later.",
         },
       ]);
     } finally {
@@ -146,9 +131,7 @@ export default function ChatbotWidget({ role = "guest" }: ChatbotWidgetProps) {
               </div>
               <div>
                 <p className="font-semibold text-sm">Style Assistant</p>
-                <p className="text-xs text-muted-foreground">
-                  Always here to help
-                </p>
+                <p className="text-xs text-muted-foreground">Always here to help</p>
               </div>
             </div>
             <button
@@ -164,9 +147,7 @@ export default function ChatbotWidget({ role = "guest" }: ChatbotWidgetProps) {
             {messages.map((msg, idx) => (
               <div
                 key={idx}
-                className={`flex ${
-                  msg.role === "user" ? "justify-end" : "justify-start"
-                }`}
+                className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 <div
                   className={`max-w-[80%] px-4 py-2 rounded-lg ${
@@ -175,13 +156,13 @@ export default function ChatbotWidget({ role = "guest" }: ChatbotWidgetProps) {
                       : "bg-secondary text-foreground"
                   }`}
                 >
+                  {/* SỬ DỤNG renderMessage(msg.content) Ở ĐÂY */}
                   <p className="text-sm whitespace-pre-wrap leading-relaxed">
                     {renderMessage(msg.content)}
                   </p>
                 </div>
               </div>
             ))}
-
             {isLoading && (
               <div className="flex justify-start">
                 <div className="bg-secondary px-4 py-2 rounded-lg">
