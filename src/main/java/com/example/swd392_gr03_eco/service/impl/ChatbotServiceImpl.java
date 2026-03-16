@@ -119,7 +119,7 @@ public class ChatbotServiceImpl implements IChatbotService {
                         **Sony WH-1000XM5 is id 1**
                         Price: $399
                         Description: Premium noise cancelling headphones.
-                        Link: [View Product](https://swd392-group3-fe.onrender.com/#/products/product/1)
+                        Link: [View Product](#/products/product/1)
                 """.formatted(productContext);
 
         List<AiRequest.Message> messages = new ArrayList<>();

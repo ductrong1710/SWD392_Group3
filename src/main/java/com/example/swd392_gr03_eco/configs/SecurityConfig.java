@@ -81,6 +81,12 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/chatbot/**").permitAll()
                         .requestMatchers("/api/v1/payment/**").permitAll()
 
+
+                        // Swagger
+                        .requestMatchers("/swagger-ui/**").permitAll()
+                        .requestMatchers("/v3/api-docs/**").permitAll()
+
+
                         // GET public
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/products/**",
